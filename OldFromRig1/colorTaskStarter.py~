@@ -1,0 +1,23 @@
+import sys, types
+from pype import *
+from colorTask import colorTask
+def RunSet(app):
+    app.taskObject.runSet(app)
+
+def cleanup(app):
+    app.taskObject.cleanup(app)
+
+
+def main(app):
+    app.taskObject = colorTask(app)
+    app.globals = Holder()
+    app.idlefb()
+    app.startfn = RunSet
+
+# This is also something that all tasks have, and it's a python thing.
+# Don't touch it.
+
+if not __name__ == '__main__':
+	loadwarn(__name__)
+else:
+	dump(sys.argv[1])

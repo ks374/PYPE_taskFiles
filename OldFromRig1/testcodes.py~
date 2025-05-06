@@ -1,0 +1,191 @@
+#!/usr/bin/python
+# -*- Mode: Python; tab-width: 4; py-indent-offset: 4; -*-
+
+"""
+This is the task file for Aim2 preliminary data.
+Its a simple fixation task. No bar control.
+Either all b8 stimuli in isolation are presented.
+Another option is to present a subset of stimuli
+partially for variable duration followed by a mask.
+Stimuli are created during iti
+
+"""
+
+# Standard modules that are imported for every task.
+import sys, types
+from pype import *
+from random import *
+#this is the stimulus module -- sends in the stimulus vertices and the order
+import b8stim as SV
+def RunSet(app):
+	"""
+	This is what is run when you hit the 'start' button (set as such in
+	the 'main' function, defined at the end of this file).
+	"""
+	
+	# tally collects the results of the last N trials and displays a
+	# running tally at the bottom of the main pype control window
+	app.tally(clear=1)
+	
+	# This erases any information printed to the console
+	app.console.clear()
+	
+	# Update the task's representation of all the parameters set in the
+	# task parameter table, rig_params and monk_params - always called P
+	P = app.params.check(mergewith=app.getcommon())
+	# Save this version (in case you've made changes since the last time
+	# the .par file was updated).
+	app.params.save()
+	app.record_note('task_is', __name__)
+
+	# Basic setup stuff, you shouldn't want to change this.
+	app.paused = 0
+	app.running = 1
+	# Makes a little green light/red light on the main pype window
+	app.led(1)
+	
+		# Set various counters and markers in app.globals.  globals is an
+	# instance of the Holder class (initialized in function "main,"
+	# below), which just lets you store a bunch of variables inside app
+	# in a reasonably neat way.
+	# - ncorrect: number of trials correct
+	# - ntrials: number of trials completed
+	# - uicount: how many trials have been uninitiated (use with uimax)
+  
+	#encode task parameters
+	t = Timer()
+	t2 = Timer()
+	t2.reset()
+	n = 64
+	while n < 4096:
+		print n
+		app.encode_plex(n)
+		app.idlefn(50)
+		app.encode_plex(0)
+		app.idlefn(50)
+		n = n + 1
+	return 1
+
+
+
+	
+def main(app):
+	"""
+	Every python program with multiple functions needs to have a main
+	function.  This sets up the parameter table, initializes app.globals,
+	and defines RunSet as the start function.  You will need to mess
+	with the parameter table to add new parameters for your task and
+	remove useless ones, but beyond that don't change things in this
+	function unless you're *really* sure you know what you're doing.
+	"""
+
+	# Initialize things
+	app.globals = Holder()
+	app.idlefb()
+	app.startfn = RunSet
+	app.mybutton = app.taskbutton(text=__name__, check=1)
+	app.notebook = DockWindow(title=__name__, checkbutton=app.mybutton)
+	parfile = app.taskname()
+	# Look for an existing saved parameter file for this task
+	if parfile:
+		parfile = parfile + '.par'
+
+	# Initialization and default values for the parameters.  Each row is
+	# one parameter.  The first value is the name of the parameter, the
+	# second is its default value, the third defines the type of
+	# the value (more on that later) and the fourth is optional and
+	# is a descriptive label that pops up when you hold the mouse over
+	# that entry in the table.  There are numerous standard parameter
+	# types, the most common are self-explanatory.  is_color needs to be
+	# 3 or 4 numbers in tuple format, e.g. (255,1,1) for red; the 4th
+	# number is optional and is an alpha value (if left off, assumed
+	# to be 255).  (0,0,0) is a special code for transparent or for
+	# white noise fill pattern, depending on the task, so use (1,1,1)
+	# for black.  is_any just gets passed as a string, this is what
+	# to use if you need a list of numbers.  is_iparam can take a
+	# variance value as either a percentage or an actual number of
+	# units, so you'd have "1000+-10%" or "150+-50".  There are a ton of
+	# others defined in ptable.py.  Values of None for default value and
+	# type make that row into a heading of sorts that can be helpful for
+	# organizing a large number of parameters.
+	
+	app.params = ParamTable(app.notebook, (
+		("Subject Params", None, None),
+		("usebar",	    "1",		   	is_boolean,),
+		("trial_tone",	"1",		   	is_boolean, "tone at every trial"),
+		("grabbeep",	"1",		   	is_boolean, "beep at bar grab"),
+		("barfirst",	"1",		   	is_boolean, "grab bar before fixspot"),
+		("Reward Params", None, None),
+		("rmult",		"1.0",		   	is_float),
+		("seqcor",      "2",            is_int),
+		("seqcor_reset","1",            is_boolean),
+		("allornone",   "1",            is_float, "0->1, prob of drop"),
+		("Dot Dimming Params", None, None),
+		("dim",	        "1",			is_boolean, "do dot dimming?"),
+		("fixcolor1",	"(255,255,255)",is_color),
+		("maxrt",       "500",          is_int),
+		("Stimulus Param", None, None),
+		("RFx",         "0",        is_int, "Stimulus location:X"),
+		("RFy",         "0",        is_int, "Stimulus location:Y"),
+		("stimcolor1",  "(255, 0, 0)",      is_color),
+		("Task Params", None, None),
+		("allstim", "1",       is_boolean, "All or some stimuli to test"),
+		("stimnum","[]",    is_any, "Stimulus numbers to test(0-21)"),
+		("rotnum","[]",     is_any, "Stimulus rotations(0-7 in 45deg increments)"),
+		("stimdur","()",    is_any, "Stimulus durations to test"),
+		("show_occl", "1",     is_boolean, "Show occluder?"),
+		("occl_shape", "1",  is_int, "Circle(0) or rectangle(1)"),
+		("occl_r", "1.0", is_float, "Occluder position in RFrad units rel. to RFcenter"),
+		("occl_theta", "45.0", is_angle_degree, "Theta position in degrees"),
+		("occl_clr", "(64,64,64)", is_color, "Occluder Color"),
+		("occl_size", "1.0", is_float, "Diameter of circle or rectangle length in RF rad units"),
+		("occl_aspect", "0.5", is_float, "Aspect ratio of rectangle occluder"),
+		('show_mask', "1", is_boolean, "Show mask?"),
+		('numarcs', "8", is_int, "Number of arcs per mask"),
+		('min_rad', "30", is_int, "Minimum radius of arcs"),
+		('arc_width', "5", is_int, "Width of the arcs in mask"),
+		("stimreps", "5",   is_int, "Number of stimulus repetitions"),
+		("IStime",	"200",		   	is_int, "Inter-stimulus interval"),
+		("nstim",	"5",			is_int, "Number of stimuli"),
+		("min_err",		"0",		   	is_int),
+		("max_err",		"100",		   	is_int),
+		("bg_before",	"(64,64,64)",	   	is_color),
+		("bg_during",	"(64,64,64)",is_color),
+		("fixlag",		"50",		   	is_int),
+		("fixwait",		"100",		   	is_int),
+		("Eye Params", None, None),
+		("innerwin",	"0",		   	is_int),
+		("track",		"0",		   	is_boolean),
+		("track_xo",   	"0",		   	is_int, "offset of track point"),
+		("track_yo",   	"0",		   	is_int, "offset of track point"),
+		("track_color", "(255,255,0)", 	is_color),
+		("Misc Params", None, None, "Miscelaneous Parameters"),
+		("Recent Buffer Size", "50", is_int, "The number of trials to use to calculate recent performance"),
+		("pause_color", "(150,0,0)", is_color, "The screen will turn this color when the task is paused")
+		), file=parfile)
+
+		
+def cleanup(app):
+	"""
+	This is not run from within the program anywhere, but I believe
+	it is necessary because every task has one.  Perhaps it is called
+	by pype itself when the task is unloaded.
+	"""
+	app.params.save()
+	app.mybutton.destroy()
+	app.notebook.destroy()
+	# The dlist should get deleted as part of cleanup, or else all
+	# the sprites remain in memory when the task is unloaded.  In
+	# this task dlist is part of app.globals.  In tasks where users
+	# have chosen not to use app.globals, they need to add a line
+	# here to delete the dlist explicitly.
+	del app.globals
+
+
+# This is also something that all tasks have, and it's a python thing.
+# Don't touch it.
+
+if not __name__ == '__main__':
+	loadwarn(__name__)
+else:
+	dump(sys.argv[1])

@@ -15,10 +15,11 @@ Added several lines for continous reward during fixation. Prefer at interval of 
 # Standard modules that are imported for every task.
 import sys, types
 from pype import *
-from Tkinter import *
+from tkinter import *
 from events import *
 from handmap_current import *
 import random
+import pygame
 
 def RunSet(app):
 	"""
@@ -28,6 +29,7 @@ def RunSet(app):
 	
 	# tally collects the results of the last N trials and displays a
 	# running tally at the bottom of the main pype control window
+	pygame.event.pump()
 	app.tally(clear=1)
 	
 	# This erases any information printed to the console
@@ -73,6 +75,7 @@ def RunSet(app):
 			try:
 				# RunTrial is a function defined below that runs a
 				# single trial.
+				pygame.event.pump()
 				result=RunTrial(app)
 			except UserAbort:
 				# The escape key will abort a trial while it's running.
@@ -125,6 +128,7 @@ def RunTrial(app):
 	"""
 	# On every trial, we check to see if any parameters have been updated
 	# while the last trial was running
+	pygame.event.pump()
 	P = app.params.check(mergewith=app.getcommon())
 	app.params.save()
 	(result, rinfo, rt, P) = _RunTrial(app, P)
@@ -158,6 +162,7 @@ def _RunTrial(app, P):
 	# The intertrial interval is at the start of each trial
 	# (arbitrary).  Calling encode will make a note in the data record
 	# with the current timestamp and whatever comment you give it.
+	pygame.event.pump()
 	app.encode_plex(START_ITI)
 
 	# Create instances of Timer class (also in pype.py), which counts 
@@ -282,8 +287,8 @@ def _RunTrial(app, P):
 	
 	try:
 		app.idlefn(P['iti']-t.ms()) 
-	    app.encode_plex(END_ITI)
-        #remember we already encoded START_ITI
+		app.encode_plex(END_ITI)
+		#remember we already encoded START_ITI
 		
 		# Reset this timer to zero
 		t.reset()
@@ -315,7 +320,7 @@ def _RunTrial(app, P):
 			# We are waiting for the eye position to move inside the
 			# fixation window.  Whether this is the case is one of
 			# the things that the FixWin class keeps track of.
-			while not fixwin.inside() and not TESTING:
+			while not fixwin.inside():
 				# We use the same abortafter limit again
 				if P['abortafter'] > 0 and t.ms() > P['abortafter']:
 					info(app, "no acquisition")
@@ -329,7 +334,7 @@ def _RunTrial(app, P):
 			# First, assume we will continue if eye stays in window
 			go_on = 1
 			while t2.ms() < P['fixwait']:
-				if not fixwin.inside() and not TESTING:
+				if not fixwin.inside():
 					# If at any time during the fixwait the eye
 					# moves back out of the window, go back to waiting
 					# for the eye to enter the window again.
@@ -351,21 +356,21 @@ def _RunTrial(app, P):
 
 		##### Now wait for ISTime
 		while t.ms() < P['IStime']:
-			if fixwin.broke() and not TESTING:
+			if fixwin.broke():
 				app.encode_plex(FIX_LOST)
 				info(app, "early break")
-			   	con(app, "early break (%d ms)" % t.ms(), 'red')
+				con(app, "early break (%d ms)" % t.ms(), 'red')
 				rinfo = BREAK_FIX
-			   	# Auditory feedback
-			   	app.warn_trial_incorrect(flash=None)
-			   	# Skip to end of trial
-			   	raise MonkError
+				# Auditory feedback
+				app.warn_trial_incorrect(flash=None)
+				# Skip to end of trial
+				raise MonkError
 
 
 			
 			# Again, a call to idlefn lets the computer catch up
-		   	# and monitor for key presses.
-		   	app.idlefn()
+			# and monitor for key presses.
+			app.idlefn()
 		#print "After ISTime %d   " % t.ms()
 		# now display stimulus 
 		hmap_show(app)
@@ -374,27 +379,28 @@ def _RunTrial(app, P):
 			app.reward(multiplier=P['rmult'])
 		if P['Random_hold'] == 1:
 			hold_duration = P['hold'] +  int(round(random.gauss(mu=0, sigma=P['Random_hold_sigma'])))
-            con(app,f"Hold = {hold_duration} ms")
+			con(app,"Hold = (%d ms)" % hold_duration)
 		else:
 			hold_duration = P['hold']
 		while t.ms() < hold_duration:
 			app.idlefn()
-			if fixwin.broke() and not TESTING:
+			if fixwin.broke():
 				app.encode(FIX_LOST) #standard event 
-		       	info(app, "early break")
-		       	con(app, "early break (%d ms)" % t.ms(), 'red')
-		   		app.encode('exact_fix_lost=%d' % fixwin.break_time())
-	       		rinfo = BREAK_FIX
-		       	app.warn_trial_incorrect(flash=None)
-		   		# Skip to end of trial
-	       		raise MonkError
+				info(app, "early break")
+				con(app, "early break (%d ms)" % t.ms(), 'red')
+				app.encode('exact_fix_lost=%d' % fixwin.break_time())
+				rinfo = BREAK_FIX
+				app.warn_trial_incorrect(flash=None)
+				# Skip to end of trial
+				raise MonkError
 
 			#added 3/6/2025: for continuous reward: -----Chenghang
 			if P['Con_reward'] == 1:
 				#con(app, "current_time (%d ms)" % t.ms(), 'red')
 				#con(app, "last_reward time (%d ms)" % last_reward_time, 'red')
-				if t.ms() - last_reward_time >= P['Reward_interval']:
-					if fixwin.inside() and not TESTING:
+				#con(app, "TimeDIff =  (%d ms)" % (t.ms() - last_reward_time), 'red')
+				if (t.ms() - last_reward_time) >= P['Reward_interval']:
+					if fixwin.inside():
 						app.reward(1)
 						con(app, "Giving reward")
 						last_reward_time = t.ms()
@@ -419,7 +425,7 @@ def _RunTrial(app, P):
 		app.globals.seqcorrect = 0
 		result = 0
 	except NoProblem:
-	    hmap_hide(app) # this is early behavioral training
+		hmap_hide(app) # this is early behavioral training
 		rinfo = CORRECT_RESPONSE
 		app.encode_plex(CORRECT_RESPONSE)
 		app.encode_plex(REWARD)
@@ -427,15 +433,15 @@ def _RunTrial(app, P):
 		app.globals.seqcorrect=app.globals.seqcorrect + 1
 		
 		if P['Reward_rand'] == 1:
-            rand_range = P['Reward_rand_range']
-            clk_num = P['num_drops'] + random.randint(-rand_range,rand_range)
+			rand_range = P['Reward_rand_range']
+			clk_num = P['num_drops'] + random.randint(-rand_range,rand_range)
 			while clk_num > 0:
-			app.reward(multiplier=P['rmult'])
-			app.idlefn(50)#time between juice drops
-			clk_num = clk_num-1
+				app.reward(multiplier=P['rmult'])
+				app.idlefn(50)#time between juice drops
+				clk_num = clk_num-1
 		else:
-        	clk_num = P['num_drops']
-        	while clk_num > 0:
+			clk_num = P['num_drops']
+			while clk_num > 0:
 				app.reward(multiplier=P['rmult'])
 				app.idlefn(50)#time between juice drops
 				clk_num = clk_num-1
@@ -533,28 +539,28 @@ def main(app):
 	
 	app.params = ParamTable(app.notebook, (
 		("Subject Params", None, None),
-		("usebar",	    "1",		   	is_boolean,),
+		("usebar",		"1",		   	is_boolean,),
 		("trial_tone",	"1",		   	is_boolean, "tone at every trial"),
 		("grabbeep",	"1",		   	is_boolean, "beep at bar grab"),
 		("barfirst",	"1",		   	is_boolean, "grab bar before fixspot"),
-		("ZeldaTrain",  "0",            is_boolean, "turn off fix spot during reward"),
+		("ZeldaTrain",  "0",			is_boolean, "turn off fix spot during reward"),
 		("Reward Params", None, None),
-                ("num_drops", "6", is_int, "Number of drops for correct trial"),
+		("num_drops", "6", is_int, "Number of drops for correct trial"),
 		("rmult",		"1.0",		   	is_float),
 		("hold_bonus","2",is_int,"Number of drops for maintaining fixation"),
-		("seqcor",      "2",            is_int),
-		("seqcor_reset","1",            is_boolean),
-		("allornone",   "1",            is_float, "0->1, prob of drop"),
+		("seqcor",	  "2",				is_int),
+		("seqcor_reset","1",			is_boolean),
+		("allornone",   "1",			is_float, "0->1, prob of drop"),
 		("Dot Dimming Params", None, None),
-		("dim",	        "1",			is_boolean, "do dot dimming?"),
+		("dim",			"1",			is_boolean, "do dot dimming?"),
 		("fixcolor1",	"(255,255,255)",is_color),
 		("fixcolor2",	"(128,128,128)",is_color),
-                ("bg_before",	"(35,19,14)",is_color, "background color in iti"),
-                ("bg_during",	"(35,19,14)",is_color, "background color during trial"),
-		("maxrt",       "500",          is_int),
+		("bg_before",	"(35,19,14)",is_color, "background color in iti"),
+		("bg_during",	"(35,19,14)",is_color, "background color during trial"),
+		("maxrt",	   "500",		  is_int),
 		("Task Params", None, None),
 		("IStime",	"200",		   	is_int, "Inter-stimulus interval"),
-		("hold",        "3300",         is_int),
+		("hold",		"3300",		 is_int),
 		("min_err",		"0",		   	is_int),
 		("max_err",		"100",		   	is_int),
 		("fixlag",		"50",		   	is_int),
@@ -565,13 +571,13 @@ def main(app):
 		("track_xo",   	"0",		   	is_int, "offset of track point"),
 		("track_yo",   	"0",		   	is_int, "offset of track point"),
 		("track_color", "(255,255,0)", 	is_color),
-                ("Chenghang's Params", None, None),
-                ("Con_reward",  "1",		   	is_boolean, "Do you want reward during fixation"),
-                ("Reward_interval",	"400",		   	is_int, "interval of reward in ms"),
-                ("Reward_rand",	"0",		   	is_boolean, "Have the reward +random(Reward_rand_range)"),
-                ("Reward_rand_range", "5",		   	is_int, "Number of drop added or substracted from reward"),
-                ("Random_hold",	"0",		   	is_boolean, "Random fixation hold, a Gauss distribution determined by mu"),
-                ("Random_hold_sigma", "100",		   	is_int, "Random change to the fixation druation. In ms. "),
+		("Chenghang's Params", None, None),
+		("Con_reward",  "1",		   	is_boolean, "Do you want reward during fixation"),
+		("Reward_interval",	"400",		   	is_int, "interval of reward in ms"),
+		("Reward_rand",	"0",		   	is_boolean, "Have the reward +random(Reward_rand_range)"),
+		("Reward_rand_range", "5",		   	is_int, "Number of drop added or substracted from reward"),
+		("Random_hold",	"0",		   	is_boolean, "Random fixation hold, a Gauss distribution determined by mu"),
+		("Random_hold_sigma", "100",		   	is_int, "Random change to the fixation druation. In ms. "),
 		), file=parfile)
 	hmap_install(app)
 		

@@ -1,0 +1,340 @@
+import sys,types, math
+from pype import *
+from events import *
+from Tkinter import *
+
+def createWilsonstim(myWidth, myLength, myFB, myStimColor1,myX, myY, myBG, line_width,theta_1,myRFsize,smp,myRot):
+	
+	#myBG=(64,64,64)	# just to look at centering
+	theta=theta_1/2.0      # computations below use half-angle
+	myRot=myRot*(pi/180.)
+	xvertex=0
+	yvertex=0
+	#shift=myRFsize/8.0		# shifting vertex 1/4 radius from center. same for splines and angles 
+	#shift= ((myRFsize/2.)/2.)*cos(theta)	#
+	shift=0.0	# changed to move to center, 9/10/08
+	xvertex= xvertex
+	yvertex= yvertex + shift
+	scale=1.0
+	radius=myRFsize/2.0		# rfsize is diameter ... scale such that all stim except s9 fit inside (each seg 1/3*r)
+	numcontrolpoints=3.0	# numcontrol points per segment
+	r=(radius/numcontrolpoints)*scale
+	
+	# 3 SEGMENTS: v_seg, mid_seg(can divide into l and r), end_seg(l,r)
+	# this way of defining segments not really used b/c of nubs at junctures
+	# but code still necessary b/c these lists are sliced and used below
+	v_segx=[xvertex-sin(theta)*r, xvertex, xvertex+sin(theta)*r]
+	v_segy=[yvertex-cos(theta)*r, yvertex, yvertex-cos(theta)*r]
+	
+	mid_lsegx= [xvertex-sin(theta)*2.0*r, xvertex-sin(theta)*r]
+	mid_rsegx= [xvertex+sin(theta)*r, xvertex+sin(theta)*2.0*r]
+	mid_lsegy= [yvertex-cos(theta)*2.0*r, yvertex-cos(theta)*r]
+	mid_rsegy= [yvertex-cos(theta)*r, yvertex-cos(theta)*2.0*r]
+	
+	end_lsegx= [xvertex-sin(theta)*3.0*r, xvertex-sin(theta)*2.0*r]
+	end_rsegx= [xvertex+sin(theta)*2.0*r, xvertex+sin(theta)*3.0*r]
+	end_lsegy= [yvertex-cos(theta)*3.0*r, yvertex-cos(theta)*2.0*r]
+	end_rsegy= [yvertex-cos(theta)*2.0*r, yvertex-cos(theta)*3.0*r]
+	
+	globend_lsegx= xvertex-sin(theta)*6.0*r
+	globend_rsegx= xvertex+sin(theta)*6.0*r
+	globend_lsegy= yvertex-cos(theta)*6.0*r
+	globend_rsegy= yvertex-cos(theta)*6.0*r
+	
+	extraend_lsegx= xvertex-sin(theta)*4.0*r
+	extraend_rsegx= xvertex+sin(theta)*4.0*r
+	extraend_lsegy= yvertex-cos(theta)*4.0*r
+	extraend_rsegy= yvertex-cos(theta)*4.0*r
+	# MANUAL ROTATIONS. each segment primitive above has 2 elements, except vsegs, which have 3
+	v_segx2=[]
+	v_segy2=[]
+	mid_lsegx2= []
+	mid_rsegx2= []
+	mid_lsegy2= []
+	mid_rsegy2= []	
+	end_lsegx2= []
+	end_rsegx2= []
+	end_lsegy2= []
+	end_rsegy2= []
+	
+	for rr in range(0,2):
+		v_segx2.append(v_segx[rr]*cos(myRot) - v_segy[rr]*sin(myRot))
+		v_segy2.append(v_segx[rr]*sin(myRot) + v_segy[rr]*cos(myRot))
+		
+		mid_lsegx2.append(mid_lsegx[rr]*cos(myRot) - mid_lsegy[rr]*sin(myRot))
+		mid_rsegx2.append(mid_rsegx[rr]*cos(myRot) - mid_rsegy[rr]*sin(myRot))
+		mid_lsegy2.append(mid_lsegx[rr]*sin(myRot) + mid_lsegy[rr]*cos(myRot))
+		mid_rsegy2.append(mid_rsegx[rr]*sin(myRot) + mid_rsegy[rr]*cos(myRot))
+		
+		end_lsegx2.append(end_lsegx[rr]*cos(myRot) - end_lsegy[rr]*sin(myRot))
+		end_rsegx2.append(end_rsegx[rr]*cos(myRot) - end_rsegy[rr]*sin(myRot))
+		end_lsegy2.append(end_lsegx[rr]*sin(myRot) + end_lsegy[rr]*cos(myRot))
+		end_rsegy2.append(end_rsegx[rr]*sin(myRot) + end_rsegy[rr]*cos(myRot))
+# 		print rr
+	v_segx2.append(v_segx[2]*cos(myRot) - v_segy[2]*sin(myRot))
+	v_segy2.append(v_segx[2]*sin(myRot) + v_segy[2]*cos(myRot))
+	
+	globend_lsegx2=(globend_lsegx*cos(myRot) - globend_lsegy*sin(myRot))
+	globend_rsegx2=(globend_rsegx*cos(myRot) - globend_rsegy*sin(myRot))
+	globend_lsegy2=(globend_lsegx*sin(myRot) + globend_lsegy*cos(myRot))
+	globend_rsegy2=(globend_rsegx*sin(myRot) + globend_rsegy*cos(myRot))
+
+	extraend_lsegx2=(extraend_lsegx*cos(myRot) - extraend_lsegy*sin(myRot))
+	extraend_rsegx2=(extraend_rsegx*cos(myRot) - extraend_rsegy*sin(myRot))
+	extraend_lsegy2=(extraend_lsegx*sin(myRot) + extraend_lsegy*cos(myRot))
+	extraend_rsegy2=(extraend_rsegx*sin(myRot) + extraend_rsegy*cos(myRot))
+	
+	v_segx=v_segx2
+	v_segy=v_segy2
+	mid_lsegx=mid_lsegx2
+	mid_rsegx=mid_rsegx2
+	mid_lsegy=mid_lsegy2
+	mid_rsegy=mid_rsegy2	
+	end_lsegx=end_lsegx2
+	end_rsegx=end_rsegx2
+	end_lsegy=end_lsegy2
+	end_rsegy=end_rsegy2
+	xvertex=v_segx[1]
+	yvertex=v_segy[1]
+# 	PRINT STUFF
+# 	v_segx
+# 	v_segy
+# 	mid_lsegx
+# 	mid_rsegx
+# 	mid_lsegy
+# 	mid_rsegy	
+# 	end_lsegx
+# 	end_rsegx
+# 	end_lsegy
+# 	end_rsegy
+# 	xvertex
+# 	yvertex
+# 	
+	
+	# FULL BSPLINE, S1
+	extraend_lsegx= extraend_lsegx2
+	extraend_rsegx= extraend_rsegx2
+	extraend_lsegy= extraend_lsegy2
+	extraend_rsegy= extraend_rsegy2
+	
+	Xvrt=[]
+	Xvrt.append(extraend_lsegx)
+	Xvrt.extend(end_lsegx)
+	Xvrt.extend(v_segx)
+	Xvrt.extend(end_rsegx)
+	Xvrt.append(extraend_rsegx)
+	Yvrt=[]
+	Yvrt.append(extraend_lsegy)
+	Yvrt.extend(end_lsegy)
+	Yvrt.extend(v_segy)
+	Yvrt.extend(end_rsegy)
+	Yvrt.append(extraend_rsegy)
+# 	print 'xvrt-full spline'
+# 	print Xvrt
+	Xvrt=asarray(Xvrt)
+	Yvrt=asarray(Yvrt)
+# 	print 'Yvrt'
+# 	print Yvrt
+	nvrt=6
+	bs_coords= interpolateBspline(Xvrt,Yvrt,nvrt,smp)
+	bs_coords=list(bs_coords)
+# 	bs_coords.insert(0,[Xvrt[0],Yvrt[0]])	# this addition previous to spline including ends.
+# 	bs_coords.append([Xvrt[-1],Yvrt[-1]])	
+# 	print 'smp,bs_coords'
+# 	print smp
+# 	print bs_coords
+	s1 = Sprite(myWidth, myLength, myX, myY, fb=myFB, depth=1, on=0, centerorigin=1)
+	s1.fill(myBG)
+	s1.unassumingpolygon(myStimColor1, 0, bs_coords, line_width)
+	
+	# FULL ANGLE, S2
+	angle_coordsX=[]
+	angle_coordsX.append(end_lsegx[0])
+	angle_coordsX.append(xvertex)
+	angle_coordsX.append(end_rsegx[1])
+	angle_coordsY=[]
+	angle_coordsY.append(end_lsegy[0])
+	angle_coordsY.append(yvertex)
+	angle_coordsY.append(end_rsegy[1])
+	angle_coords= transpose(reshape(concatenate([angle_coordsX,angle_coordsY]),(2,len(angle_coordsX))))
+	
+	s2 = Sprite(myWidth, myLength, myX, myY, fb=myFB, depth=1, on=0, centerorigin=1)
+	s2.fill(myBG)
+	s2.unassumingpolygon(myStimColor1, 0, angle_coords,line_width)
+	
+	# EVEN BIGGER ANGLE aka globangle, S9, EXTENDS OUTIDE RF
+	globangle_coordsX=[]
+	globangle_coordsX.append(globend_lsegx2)
+	globangle_coordsX.append(xvertex)
+	globangle_coordsX.append(globend_rsegx2)
+	
+	globangle_coordsY=[]
+	globangle_coordsY.append(globend_lsegy2)
+	globangle_coordsY.append(yvertex)
+	globangle_coordsY.append(globend_rsegy2)
+	
+	globangle_coords= transpose(reshape(concatenate([globangle_coordsX,globangle_coordsY]), (2,len(globangle_coordsX))))
+	
+	s9 = Sprite(myWidth, myLength, myX, myY, fb=myFB, depth=1, on=0, centerorigin=1)
+	s9.fill(myBG)
+	s9.unassumingpolygon(myStimColor1, 0, globangle_coords,line_width)
+	s9.alpha_gradient2(0,myRFsize,myBG,0,0)
+	
+	
+	# MISSING TIP,S3, left and right segments defined separately
+	left_coordsX=[]
+	left_coordsX.append(end_lsegx[0])
+	left_coordsX.append(mid_lsegx[1])
+	left_coordsY=[]
+	left_coordsY.append(end_lsegy[0])
+	left_coordsY.append(mid_lsegy[1])
+	
+	right_coordsX=[]
+	right_coordsX.append(mid_rsegx[0])
+	right_coordsX.append(end_rsegx[1])
+	right_coordsY=[]
+	right_coordsY.append(mid_rsegy[0])
+	right_coordsY.append(end_rsegy[1])
+	
+	left_coords= transpose(reshape(concatenate([left_coordsX,left_coordsY]),(2,len(left_coordsX))))
+	right_coords= transpose(reshape(concatenate([right_coordsX,right_coordsY]),(2,len(right_coordsX))))
+
+	s3 = Sprite(myWidth, myLength, myX, myY, fb=myFB, depth=1, on=0, centerorigin=1)
+	s3.fill(myBG)
+	s3.polygon(myStimColor1, left_coords, line_width)
+	s3.polygon(myStimColor1, right_coords, line_width)
+	
+	# LEFT SIDE, S4 ... RIGHT SIDE, S5 (both of these are full segs, extended to include tip)
+	leftbar_coordsX=[]
+	leftbar_coordsX.append(left_coordsX[0])
+	leftbar_coordsX.append(xvertex)
+	leftbar_coordsY=[]
+	leftbar_coordsY.append(left_coordsY[0])
+	leftbar_coordsY.append(yvertex)
+	leftbar_coords= transpose(reshape(concatenate([leftbar_coordsX,leftbar_coordsY]),(2,len(leftbar_coordsX))))
+	rightbar_coordsX=[]
+	rightbar_coordsX.append(xvertex)
+	rightbar_coordsX.append(right_coordsX[1])
+	rightbar_coordsY=[]
+	rightbar_coordsY.append(yvertex)
+	rightbar_coordsY.append(right_coordsY[1])
+	rightbar_coords= transpose(reshape(concatenate([rightbar_coordsX,rightbar_coordsY]),(2,len(rightbar_coordsX))))
+	
+	s4 = Sprite(myWidth, myLength, myX, myY, fb=myFB, depth=1, on=0, centerorigin=1)
+	s4.fill(myBG)
+	s4.polygon(myStimColor1, leftbar_coords, line_width)
+	
+	s5 = Sprite(myWidth, myLength, myX, myY, fb=myFB, depth=1, on=0, centerorigin=1)
+	s5.fill(myBG)
+	s5.polygon(myStimColor1, rightbar_coords, line_width)
+	
+	# SHORT SEGS, S6
+	shortleft_coords= transpose(reshape(concatenate([end_lsegx,end_lsegy]),(2,len(end_lsegx))))
+	shortright_coords= transpose(reshape(concatenate([end_rsegx,end_rsegy]),(2,len(end_rsegy))))
+	s6 = Sprite(myWidth, myLength, myX, myY, fb=myFB, depth=1, on=0, centerorigin=1)
+	s6.fill(myBG)
+	s6.polygon(myStimColor1, shortleft_coords, line_width)
+	s6.polygon(myStimColor1, shortright_coords, line_width)
+	
+	# MIDS, S10
+	midleft_coords= transpose(reshape(concatenate([mid_lsegx,mid_lsegy]),(2,len(mid_lsegx))))
+	midright_coords= transpose(reshape(concatenate([mid_rsegx,mid_rsegy]),(2,len(mid_rsegy))))
+	s10 = Sprite(myWidth, myLength, myX, myY, fb=myFB, depth=1, on=0, centerorigin=1)
+	s10.fill(myBG)
+	s10.polygon(myStimColor1, midleft_coords, line_width)
+	s10.polygon(myStimColor1, midright_coords, line_width)
+	
+	# ANGLE TIP, S7 
+	tip_coords= transpose(reshape(concatenate([v_segx,v_segy]),(2,len(v_segx))))
+	s7 = Sprite(myWidth, myLength, myX, myY, fb=myFB, depth=1, on=0, centerorigin=1)
+	s7.fill(myBG)
+	s7.unassumingpolygon(myStimColor1, 0,tip_coords, line_width)
+	
+	# BSPLINE TIP, S8
+	Xvrt1=[]
+	Xvrt1.extend(mid_lsegx)
+	Xvrt1.append(xvertex)
+	Xvrt1.extend(mid_rsegx)
+	Yvrt1=[]
+	Yvrt1.extend(mid_lsegy)
+	Yvrt1.append(yvertex)
+	Yvrt1.extend(mid_rsegy)
+	Xvrt1=asarray(Xvrt1)
+	Yvrt1=asarray(Yvrt1)
+	nvrt1=2
+# 	print 'Yvrt1--tip'
+# 	print Yvrt1
+# 	endpoint1=[Xvrt1[0],Yvrt1[0]]
+# 	endpoint2=[Xvrt1[-1],Yvrt1[-1]]
+	bstip_coords= interpolateBspline(Xvrt1,Yvrt1,nvrt1,smp)	
+# 	bstip_coords=list(bstip_coords)
+# 	bstip_coords.append(asarray(endpoint2))
+# 	bstip_coords.insert(0,asarray(endpoint1))
+# 	print 'bstip_coords'
+# 	print bstip_coords
+	s8 = Sprite(myWidth, myLength, myX, myY, fb=myFB, depth=1, on=0, centerorigin=1)
+	s8.fill(myBG)
+	s8.unassumingpolygon(myStimColor1, 0, bstip_coords, line_width)
+	
+	
+	return s1,s2,s3,s4,s5,s6,s7,s8,s9,s10
+	
+
+def interpolateBspline(Xvrt,Yvrt,nvrt,smp):
+	smp= float(smp)
+	ip = arange(smp)/(smp-1) 
+	incr = zeros((4,int(smp)), Float)
+	incr[0,:] = -ip*ip*ip+3*ip*ip-3*ip+1
+	incr[1,:] = 3*ip*ip*ip-6*ip*ip+4
+	incr[2,:] = -3*ip*ip*ip+3*ip*ip+3*ip+1
+	incr[3,:] = ip*ip*ip
+	Xarr = zeros(nvrt*int(smp), Float)## array for polygon vertices
+	Yarr = zeros(nvrt*int(smp), Float)
+	xvrtid = zeros((4,int(smp)), Float)
+	yvrtid = zeros((4,int(smp)), Float)
+	
+	vtx = []
+	vty = []
+	j = 0
+	while j < nvrt:
+		k=0
+		while k < 4:
+			xvrtid[k,:] = Xvrt[j+k]
+			yvrtid[k,:] = Yvrt[j+k]
+			k = k+1
+		xb = list(sum(xvrtid*incr)/6.0)
+		vtx.append(xb)
+		yb = list(sum(yvrtid*incr)/6.0)
+		vty.append(yb)
+		j = j+1
+	vtx1 = reshape(array(vtx),(nvrt*int(smp),))
+	vty1 = reshape(array(vty),(nvrt*int(smp),))
+
+	Xarr[0:nvrt*int(smp)] = vtx1  # adding .5 because anitha does. can't tell if it helps with clipping
+	Yarr[0:nvrt*int(smp)] = vty1  # took this out to debug... might distort oridistance. can add .5 alter
+	
+	bs_coords = transpose(reshape(concatenate([Xarr[0:nvrt*int(smp)],Yarr[0:nvrt*int(smp)]]),\
+				(2,smp*nvrt)))
+	return bs_coords
+
+
+
+
+def createB8stim(myWidth, myLength, myFB, myColor,myX, myY, myBG, coords,line_width):
+    s = Sprite(myWidth, myLength, myX, myY, fb=myFB, depth=1, on=0, centerorigin=1)
+    s.fill(myBG)    
+
+    s.polygon(myColor, coords, line_width)
+    s.myColor = myColor
+    return s
+
+
+# note that bar is used for blank creation. worth keeping. none of the other shapes are used.
+def createBar(myWidth, myLength, myFB, myColor, myRot, myX, myY,myBG):
+    s = Sprite(myWidth, myLength, myX, myY, fb=myFB, depth=1, on=0, centerorigin=1) 
+    s.fill(myColor)
+    s.rotate(myRot, 0, 1)
+    s.myColor = myColor
+    return s
+
+

@@ -1,0 +1,17 @@
+def RunSet(app):
+    app.taskObject.RunSet
+
+def cleanup(app):
+    app.taskObject.cleanup
+
+
+def main(app):
+
+
+# This is also something that all tasks have, and it's a python thing.
+# Don't touch it.
+
+if not __name__ == '__main__':
+	loadwarn(__name__)
+else:
+	dump(sys.argv[1])

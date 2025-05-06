@@ -1,0 +1,200 @@
+import sys,types, math
+from pype import *
+from events import *
+from Tkinter import *
+
+def createTwoBarstim(myWidth, myLength, myFB, myStimColor1,myX, myY, myBG, line_width,myRFsize):
+	#myBG=(64,64,64)		# just to look at centering
+	#rots=[0.,pi/4.,pi/2.,3.*pi/4.]	#made to line up with rots elsewhere, these are bar orientations
+	# KLUGE... changed to test chaniging sampled orientations
+	rots=[0.,0.,0.,0.]
+	s_list=[]
+	
+	# PARAMS, THAT WE WANT TO BE LARGELY HARD-CODED
+	RFradius= myRFsize/2.0
+	SUBlength= myRFsize/3.0	#this is spacing between centers of middle subunit and radial subunits
+	midSUBlength=SUBlength/(2.*cos(pi/8.))
+	barlength= myRFsize/6.0    # bar length is length of mids,ends (RFsize/6)
+	
+	# i should also return a list much like
+	# GET RF SUBUNIT CENTERS FIRST
+	theta_centers=arange(0,2*pi,pi/4)	# subunit center angular positions
+	polarSUBcenterX=[]
+	polarSUBcenterY=[]
+	polarSUBcenterX.append(0)
+	polarSUBcenterY.append(0)
+	for tt in range(len(theta_centers)):
+		polarSUBcenterX.append(SUBlength*cos(theta_centers[tt]))
+		polarSUBcenterY.append(SUBlength*sin(theta_centers[tt]))
+	
+	# LOOP THROUGH ALL LOCATION-ROT COMBOS AND DRAW SPRITES
+	# LOC_IDs returned as 0-8, (later, 1-9 or 21-29), rotations range (0-3, later 45etc.)
+	loc1_ID=[]	# these lists keep track of stim locs and rots
+	loc2_ID=[]	# unpackaged into separate lists b/c this is not matlab.
+	rot1_ID=[]
+	rot2_ID=[]
+	for loc_a in range(0,8):
+		for loc_b in range(loc_a+1,9):
+			for rot_a in range(0,4):
+				for rot_b in range(0,4):
+					# book-keeping
+					loc1_ID.append(loc_a)
+					loc2_ID.append(loc_b)
+					rot1_ID.append(rot_a)
+					rot2_ID.append(rot_b)
+					# RF centers at 2 locs
+					loc1x= polarSUBcenterX[loc1_ID[-1]]
+					loc1y= polarSUBcenterY[loc1_ID[-1]]
+					loc2x= polarSUBcenterX[loc2_ID[-1]]
+					loc2y= polarSUBcenterY[loc2_ID[-1]]
+					# Location 1
+					xmove1= (barlength/2.)*cos(rots[rot_a])
+					ymove1= (barlength/2.)*sin(rots[rot_a])
+					xbar1= [loc1x-xmove1, loc1x+xmove1]
+					ybar1= [loc1y-ymove1, loc1y+ymove1]
+					bar1_coords= transpose(reshape(concatenate([xbar1,ybar1]),(2,len(xbar1))))
+					# Location 2
+					xmove2= (barlength/2.)*cos(rots[rot_b])
+					ymove2= (barlength/2.)*sin(rots[rot_b])
+					xbar2= [loc2x-xmove2, loc2x+xmove2]
+					ybar2= [loc2y-ymove2, loc2y+ymove2]
+					bar2_coords= transpose(reshape(concatenate([xbar2,ybar2]),(2,len(xbar2))))
+					# Make Sprite
+					s= Sprite(myWidth, myLength, myX, myY, fb=myFB, depth=1, on=0, centerorigin=1)
+					s.fill(myBG)
+					s.polygon(myStimColor1, bar1_coords, line_width)
+					s.polygon(myStimColor1, bar2_coords, line_width)
+					s_list.append(s)
+	return s_list, loc1_ID, loc2_ID, rot1_ID, rot2_ID
+
+def createOneBarstim(myWidth, myLength, myFB, myStimColor1,myX, myY, myBG, line_width,myRFsize):
+	#myBG=(64,64,64)		# just to look at centering
+	rots=[0.,pi/4.,pi/2.,3.*pi/4.]	#made to line up with rots elsewhere, these are bar orientations
+	s_list=[]
+	loc1_ID=[]
+	rot1_ID=[]
+	# PARAMS, THAT WE WANT TO BE LARGELY HARD-CODED
+	RFradius= myRFsize/2.0
+	SUBlength= myRFsize/3.0	#this is spacing between centers of middle subunit and radial subunits
+	midSUBlength=SUBlength/(2.*cos(pi/8.))
+	barlength= myRFsize/6.0    # bar length is length of mids,ends (RFsize/6)
+	
+	
+	## CENTRAL AND OUTER RF SUBS
+	theta_centers=arange(0,2*pi,pi/4)
+	polarSUBcenterX=[]
+	polarSUBcenterY=[]
+	# append centers 1st as (0,0) in sprite coords (how nice!)
+	polarSUBcenterX.append(0)
+	polarSUBcenterY.append(0)
+	# Sprites at central sub drawn separately for simpler indexing.
+	for jj in range(len(rots)):
+		xmove= barlength/2.*cos(rots[jj])
+		ymove= barlength/2.*sin(rots[jj])
+		xbar= [polarSUBcenterX[0]-xmove, polarSUBcenterX[0]+xmove]
+		ybar= [polarSUBcenterY[0]-ymove, polarSUBcenterY[0]+ymove]
+		bar_coords= transpose(reshape(concatenate([xbar,ybar]),(2,len(xbar))))
+		s= Sprite(myWidth, myLength, myX, myY, fb=myFB, depth=1, on=0, centerorigin=1)
+		s.fill(myBG)
+		s.polygon(myStimColor1, bar_coords, line_width)
+		s_list.append(s)
+		loc1_ID.append(0)
+		rot1_ID.append(jj)
+	for tt in range(len(theta_centers)):
+		polarSUBcenterX.append(SUBlength*cos(theta_centers[tt]))
+		polarSUBcenterY.append(SUBlength*sin(theta_centers[tt]))
+		for jj in range(len(rots)):
+			xmove= barlength/2.*cos(rots[jj])
+			ymove= barlength/2.*sin(rots[jj])
+			xbar= [polarSUBcenterX[-1]-xmove, polarSUBcenterX[-1]+xmove]
+			ybar= [polarSUBcenterY[-1]-ymove, polarSUBcenterY[-1]+ymove]
+			bar_coords= transpose(reshape(concatenate([xbar,ybar]),(2,len(xbar))))
+			s= Sprite(myWidth, myLength, myX, myY, fb=myFB, depth=1, on=0, centerorigin=1)
+			s.fill(myBG)
+			s.polygon(myStimColor1, bar_coords, line_width)
+			s_list.append(s)
+			loc1_ID.append(tt+1)
+			rot1_ID.append(jj)
+	## MIDDLE RF SUBS
+	midtheta_centers=arange(pi/8., 2*pi, pi/4)
+	midpolarSUBcenterX=[]
+	midpolarSUBcenterY=[]
+	for tt in range(len(midtheta_centers)):
+		midpolarSUBcenterX.append(midSUBlength*cos(midtheta_centers[tt]))
+		midpolarSUBcenterY.append(midSUBlength*sin(midtheta_centers[tt]))
+		for jj in range(len(rots)):
+			xmove= barlength/2.*cos(rots[jj])
+			ymove= barlength/2.*sin(rots[jj])
+			xbar= [midpolarSUBcenterX[-1]-xmove, midpolarSUBcenterX[-1]+xmove]
+			ybar= [midpolarSUBcenterY[-1]-ymove, midpolarSUBcenterY[-1]+ymove]
+			bar_coords= transpose(reshape(concatenate([xbar,ybar]),(2,len(xbar))))
+			s= Sprite(myWidth, myLength, myX, myY, fb=myFB, depth=1, on=0, centerorigin=1)
+			s.fill(myBG)
+			s.polygon(myStimColor1, bar_coords, line_width)
+			s_list.append(s)
+			loc1_ID.append(tt+9)
+			rot1_ID.append(jj)
+	return s_list, loc1_ID, rot1_ID
+
+
+def createAbridgedOneBarstim(myWidth, myLength, myFB, myStimColor1,myX, myY, myBG, line_width,myRFsize):
+	#myBG=(64,64,64)		# just to look at centering
+	rots=[0.,pi/4.,pi/2.,3.*pi/4.]	#made to line up with rots elsewhere, these are bar orientations
+	s_list=[]
+	loc1_ID=[]
+	rot1_ID=[]
+	# PARAMS, THAT WE WANT TO BE LARGELY HARD-CODED
+	RFradius= myRFsize/2.0
+	SUBlength= myRFsize/3.0	#this is spacing between centers of middle subunit and radial subunits
+	midSUBlength=SUBlength/(2.*cos(pi/8.))
+	barlength= myRFsize/6.0    # bar length is length of mids,ends (RFsize/6)
+	
+	
+	## CENTRAL AND OUTER RF SUBS
+	theta_centers=arange(0,2*pi,pi/4)
+	polarSUBcenterX=[]
+	polarSUBcenterY=[]
+	# append centers 1st as (0,0) in sprite coords (how nice!)
+	polarSUBcenterX.append(0)
+	polarSUBcenterY.append(0)
+	# Sprites at central sub drawn separately for simpler indexing.
+	for jj in range(len(rots)):
+		xmove= barlength/2.*cos(rots[jj])
+		ymove= barlength/2.*sin(rots[jj])
+		xbar= [polarSUBcenterX[0]-xmove, polarSUBcenterX[0]+xmove]
+		ybar= [polarSUBcenterY[0]-ymove, polarSUBcenterY[0]+ymove]
+		bar_coords= transpose(reshape(concatenate([xbar,ybar]),(2,len(xbar))))
+		s= Sprite(myWidth, myLength, myX, myY, fb=myFB, depth=1, on=0, centerorigin=1)
+		s.fill(myBG)
+		s.polygon(myStimColor1, bar_coords, line_width)
+		s_list.append(s)
+		loc1_ID.append(0)
+		rot1_ID.append(jj)
+	for tt in range(len(theta_centers)):
+		polarSUBcenterX.append(SUBlength*cos(theta_centers[tt]))
+		polarSUBcenterY.append(SUBlength*sin(theta_centers[tt]))
+		for jj in range(len(rots)):
+			xmove= barlength/2.*cos(rots[jj])
+			ymove= barlength/2.*sin(rots[jj])
+			xbar= [polarSUBcenterX[-1]-xmove, polarSUBcenterX[-1]+xmove]
+			ybar= [polarSUBcenterY[-1]-ymove, polarSUBcenterY[-1]+ymove]
+			bar_coords= transpose(reshape(concatenate([xbar,ybar]),(2,len(xbar))))
+			s= Sprite(myWidth, myLength, myX, myY, fb=myFB, depth=1, on=0, centerorigin=1)
+			s.fill(myBG)
+			s.polygon(myStimColor1, bar_coords, line_width)
+			s_list.append(s)
+			loc1_ID.append(tt+1)
+			rot1_ID.append(jj)
+	
+	return s_list, loc1_ID, rot1_ID
+
+
+# note that bar is used for blank creation. worth keeping. none of the other shapes are used.
+def createBar(myWidth, myLength, myFB, myColor, myRot, myX, myY,myBG):
+    s = Sprite(myWidth, myLength, myX, myY, fb=myFB, depth=1, on=0, centerorigin=1) 
+    s.fill(myColor)
+    s.rotate(myRot, 0, 1)
+    s.myColor = myColor
+    return s
+
+

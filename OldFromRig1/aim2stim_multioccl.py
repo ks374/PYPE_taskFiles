@@ -1,0 +1,1086 @@
+#!/usr/bin/python
+# -*- Mode: Python; tab-width: 4; py-indent-offset: 4; -*-
+
+"""
+This is the task file for Aim2 preliminary data.
+Its a simple fixation task. No bar control.
+Either all b8 stimuli in isolation are presented
+or a subset of stimuli partially occluded for variable 
+duration followed by a mask.
+Stimuli are created during iti
+
+Occluder=0 Mode=0 is Stimulus alone
+"""
+
+# Standard modules that are imported for every task.
+import sys, types
+from pype import *
+from random import *
+#this is the stimulus module -- sends in the stimulus vertices and the order
+import b8stim_new as SV
+def RunSet(app):
+	"""
+	This is what is run when you hit the 'start' button (set as such in
+	the 'main' function, defined at the end of this file).
+	"""
+	
+	# tally collects the results of the last N trials and displays a
+	# running tally at the bottom of the main pype control window
+	app.tally(clear=1)
+	
+	# This erases any information printed to the console
+	#app.console.clear()
+	
+	# Update the task's representation of all the parameters set in the
+	# task parameter table, rig_params and monk_params - always called P
+	P = app.params.check(mergewith=app.getcommon())
+	# Save this version (in case you've made changes since the last time
+	# the .par file was updated).
+	app.params.save()
+	app.record_note('task_is', __name__)
+
+	# Basic setup stuff, you shouldn't want to change this.
+	app.paused = 0
+	app.running = 1
+	# Makes a little green light/red light on the main pype window
+	app.led(1)
+	
+	# Set various counters and markers in app.globals.  globals is an
+	# instance of the Holder class (initialized in function "main,"
+	# below), which just lets you store a bunch of variables inside app
+	# in a reasonably neat way.
+	# - ncorrect: number of trials correct
+	# - ntrials: number of trials completed
+	# - uicount: how many trials have been uninitiated (use with uimax)
+    # - start: Stimulus to start trial on (keeps track of the presented stimuli)
+	app.globals.ncorrect = 0
+	app.globals.ntrials = 0
+	app.globals.uicount = 0
+	app.globals.start = 0
+
+	app.globals.plexStimIDOffset = pype_plex_code_dict('plexStimIDOffset')
+	app.globals.plexRotOffset = pype_plex_code_dict('plexRotOffset')
+	app.globals.plexYOffset = pype_plex_code_dict('plexYOffset')
+	#Calculate stimulus eccentricity and then figure out stimulus size
+	#in pixels
+ 	app.globals.ecc = ((P['RFx']**2)+(P['RFy']**2))**0.5
+    app.globals.size = int(P['mon_ppd']+0.625*app.globals.ecc)
+
+    xt1 = (SV.Xarr*app.globals.size/SV.spritesize)+0.5
+	yt1 = (SV.Yarr*app.globals.size/SV.spritesize)+0.5
+	app.globals.xv1 = xt1.tolist()
+	app.globals.yv1 = yt1.tolist()
+	
+#####################################################
+	#Create the stimorder vector based on the stimuli to show and the
+	#number of reps
+    nct = 0
+	app.globals.dur = eval(P['stimdur'])
+	if (P['allstim'] == 1): #### Show all stim
+		## stimulus numbers start at 1; 0 reserved for blank
+		app.globals.stimid = SV.stmlist
+		app.globals.rotid = SV.rotlist
+	elif (P['allstim'] == 2):# show subset stim from 1-29
+		app.globals.stimid = SV.sub_stmlist
+		app.globals.rotid = SV.sub_rotlist
+	elif (P['allstim'] == 3): # create lists only of stimuli to be presented
+		app.globals.stimid = eval(P['stimnum'])
+		app.globals.rotid = eval(P['rotnum'])
+
+    ##### then set up the duration buffers
+	app.globals.dur = eval(P['stimdur'])
+	app.globals.dur = app.globals.dur*len(app.globals.stimid)
+	app.globals.dur.sort() ### all durations are repeated stimid times
+	app.globals.stimid = app.globals.stimid*len(eval(P['stimdur'])) ### every stim is
+	###repeated at each duration
+	app.globals.rotid = app.globals.rotid*len(eval(P['stimdur'])) ### every rotation is
+	###repeated at each duration
+	### this is with no occluder, no mode
+	app.globals.occl =[0]*len(app.globals.stimid)
+	app.globals.mode = [0]*len(app.globals.stimid)
+
+	###Then set up the occluder and mode buffers if show occl
+	if (P['show_occl'] == 1):
+		app.globals.occl1 = eval(P['occl_shape'])*len(app.globals.stimid)
+		app.globals.occl1.sort()
+		app.globals.stimid1 = app.globals.stimid*len(eval(P['occl_shape']))
+		app.globals.rotid1 = app.globals.rotid*len(eval(P['occl_shape']))
+		app.globals.dur1 = app.globals.dur*len(eval(P['occl_shape']))
+		#next mode
+		app.globals.mode1 = eval(P['occl_mode'])*len(app.globals.stimid1)
+		app.globals.mode1.sort()
+		app.globals.stimid1 = app.globals.stimid1*len(eval(P['occl_mode']))
+		app.globals.rotid1 = app.globals.rotid1*len(eval(P['occl_mode']))
+		app.globals.dur1 = app.globals.dur1*len(eval(P['occl_mode']))
+		app.globals.occl1 = app.globals.occl1*len(eval(P['occl_mode']))
+		#now for pattern stimuli
+		app.globals.occl2 = eval(P['patrn_shape'])*len(app.globals.stimid)
+		app.globals.occl2.sort()
+		app.globals.stimid2 = app.globals.stimid*len(eval(P['patrn_shape']))
+		app.globals.rotid2 = app.globals.rotid*len(eval(P['patrn_shape']))
+		app.globals.dur2 = app.globals.dur*len(eval(P['patrn_shape']))
+		#next mode
+		app.globals.mode2 = eval(P['patrn_mode'])*len(app.globals.stimid2)
+		app.globals.mode2.sort()
+		app.globals.stimid2 = app.globals.stimid2*len(eval(P['patrn_mode']))
+		app.globals.rotid2 = app.globals.rotid2*len(eval(P['patrn_mode']))
+		app.globals.dur2 = app.globals.dur2*len(eval(P['patrn_mode']))
+		app.globals.occl2 = app.globals.occl2*len(eval(P['patrn_mode']))
+		
+		app.globals.stimid = app.globals.stimid*(P['objalonereps']/P['stimreps'])+app.globals.stimid1+app.globals.stimid2
+		app.globals.rotid = app.globals.rotid*(P['objalonereps']/P['stimreps'])+app.globals.rotid1+app.globals.rotid2
+		app.globals.dur  = app.globals.dur*(P['objalonereps']/P['stimreps'])+app.globals.dur1+app.globals.dur2
+		app.globals.occl = app.globals.occl*(P['objalonereps']/P['stimreps'])+app.globals.occl1+app.globals.occl2
+		app.globals.mode = app.globals.mode*(P['objalonereps']/P['stimreps'])+app.globals.mode1+app.globals.mode2
+		#show occluder alone?
+		if (P['occl_alone'] == 1):
+			app.globals.stimid = app.globals.stimid+[0]*len(eval(P['occl_shape'])+eval(P['patrn_shape']))##no stimulus
+			app.globals.rotid = app.globals.rotid+[0]*len(eval(P['occl_shape'])+eval(P['patrn_shape']))##no stimulus 
+			app.globals.dur = app.globals.dur+[max(app.globals.dur)]*len(eval(P['occl_shape'])+eval(P['patrn_shape']))
+			app.globals.occl = app.globals.occl + eval(P['occl_shape']) + eval(P['patrn_shape'])
+			app.globals.mode = app.globals.mode + [3]*len(eval(P['occl_shape'])+eval(P['patrn_shape']))
+	
+
+    ### Now add four blank stimuli
+	app.globals.stimid = app.globals.stimid+[0,0,0,0]
+	app.globals.rotid = app.globals.rotid+[0,0,0,0]
+	app.globals.dur = app.globals.dur+[max(app.globals.dur)]*4
+	app.globals.occl = app.globals.occl + [0,0,0,0] # No occluder
+	app.globals.mode = app.globals.mode + [0,0,0,0] # No occluder
+	
+    a = range(len(app.globals.stimid))
+	app.globals.stimorder = []
+	while nct < (P['stimreps']):
+		if(P['randomize'] == 1):
+			shuffle(a)
+		app.globals.stimorder = app.globals.stimorder+a
+		nct = nct+1
+#####################################################
+	#encode task parameters
+
+	app.encode_plex('rfx')
+	app.encode_plex(P['RFx']+app.globals.plexYOffset)
+	app.encode_plex('rfy')
+	app.encode_plex(P['RFy']+app.globals.plexYOffset)
+	app.encode_plex('iti')
+	app.encode_plex(int(P['iti']))
+	app.encode_plex('isi')
+	app.encode_plex(int(P['IStime']))
+	app.encode_plex('numstim')
+	app.encode_plex(int(P['nstim']))
+
+#################################################################
+		#encode colors of stimuli.  This may not belong here as colors can change during a trial, however that is a rarity and shouldn't happen outside of training
+	app.encode_plex('color')
+	stimColorName = 'stimcolor1'
+	if(P.has_key(stimColorName)):
+		colorTuple = P[stimColorName]
+		app.encode_plex(colorTuple[0] + app.globals.plexRotOffset)
+		app.encode_plex(colorTuple[1] + app.globals.plexRotOffset)
+		app.encode_plex(colorTuple[2] + app.globals.plexRotOffset)
+	stimColorName = 'occl_clr'
+	if(P.has_key(stimColorName)):
+		colorTuple = P[stimColorName]
+		app.encode_plex(colorTuple[0] + app.globals.plexRotOffset)
+		app.encode_plex(colorTuple[1] + app.globals.plexRotOffset)
+		app.encode_plex(colorTuple[2] + app.globals.plexRotOffset)
+
+#################################################################
+	#encode occluder and mask information. Occl r, size, aspect and patrn size are floats. 
+	#Encoding them as ints after multiplying by a 1000.
+	
+	app.encode_plex('occl_info')
+	app.encode_plex(P['show_occl'])
+	app.encode_plex(int(P['occl_r']*1000))
+	app.encode_plex(int(P['occl_theta']))
+	app.encode_plex(int(P['occl_size']*1000))
+	app.encode_plex(int(P['occl_aspect']*1000))
+	app.encode_plex(int(P['patrn_size']*1000))
+	app.encode_plex('mask_info')
+	app.encode_plex(P['show_mask']) 
+
+	#initialize ITI timer, we are now in the first ITI
+	t = Timer()
+
+	# This call intiates the first ITI before the first trial.
+	# Calling encode will make a note in the data record
+	# with the current timestamp and whatever comment you give it.
+	#app.encode(START_ITI)
+
+	app.encode_plex(START_ITI)
+	
+	# Calls RunTrial, and calculates a running percentage correct.
+	try:
+		# I added this to keep a running "recent" percentage correct
+		# because perfomance often changes during the task.
+		pctbuffer=list()
+		
+		# Call Run trial only if there are still unshown stimuli in
+		# the stimorder buffer
+		while app.running and (app.globals.start < len(app.globals.stimorder)):
+	        #This task implements pause (f5) at the trial level
+			was_paused = 0
+			while(app.paused):
+				if(was_paused == 0):
+					app.encode_plex('pause')
+					app.globals.dlist.bg = P['pause_color']
+					# Update the dlist and flip the framebuffer
+					app.globals.dlist.update()
+					app.fb.flip()
+					was_paused = 1
+				app.idlefn()
+			if(was_paused): #reset background color
+				app.encode_plex('unpause')
+				app.globals.dlist.bg = P['bg_during']
+				# Update the dlist and flip the framebuffer
+				app.globals.dlist.update()
+				app.fb.flip()
+
+			try:
+				# RunTrial is a function defined below that runs a
+				# single trial.
+				result=RunTrial(app,t)
+			except UserAbort:
+				# The escape key will abort a trial while it's running.
+				result=None
+				pass
+			# This if statement avoids a divide-by-zero error if the
+			# first trial is aborted before ntrials is incremented
+			if (app.globals.ntrials > 0 and P['Recent Buffer Size'] > 0):
+				# Take the first value off of the pctbuffer
+				#xxx=pctbuffer.pop(0)
+				pctbuffer.append(result)
+				# Average the performance over the past X trials.
+				if(app.globals.ntrials < P['Recent Buffer Size']) :
+					recent=100*app.globals.ncorrect/app.globals.ntrials
+				else:
+					lastX = pctbuffer[len(pctbuffer) - P['Recent Buffer Size']::]
+					recent=100*lastX.count(CORRECT_RESPONSE)/len(lastX)
+
+				stimPerTrial =  float(app.globals.start)/ float(app.globals.ntrials)
+			else:
+				stimPerTrial = 0.0
+			# This call prints the overall and recent perf % to console
+			
+			con(app, " %s:%d %d/%d %.0f%% (recent %.0f%%)\n %0.2f stims per trial" % \
+				(now(), app.nreps(),app.globals.ncorrect, app.globals.ntrials, 100.0 * \
+				 app.globals.ncorrect / app.globals.ntrials, recent,stimPerTrial), 'black')
+			
+	except:
+		# If there's an error generated inside the try statement,
+		# it drops to here - reporterror tries to exit cleanly instead
+		# of crashing the machine.
+		reporterror()
+	
+	# More housekeeping stuff, also shouldn't change.
+	app.repinfo()
+	app.running = 0
+	app.led(0)
+	# standard beep sequence when you hit the "stop" button.
+	app.warn_run_stop()
+	# This is the end of the RunSet function.
+	return 1
+
+def RunTrial(app,t):
+	"""
+	RunTrial is called by RunSet.  It does housekeeping stuff associated
+	with recording behavioral data for an individual trial, and calls the
+	_RunTrial function which actually does the stimulus presentation and
+	task control. 
+	"""
+	# On every trial, we check to see if any parameters have been updated
+	# while the last trial was running
+	P = app.params.check(mergewith=app.getcommon())
+	
+	# This function will actually do the task control and stimulus display
+	# and return its results back here for housekeeping.
+	(result, rt, P) = _RunTrial(app, P,t)
+		
+	# Check to see whether we've exceeded the max allowable uninitiated
+	# trials, and if so, pop up a little warning box that will stall the
+	# task until the user clicks it. 
+	if result == UNINITIATED_TRIAL:
+		app.globals.uicount = app.globals.uicount + 1
+		if app.globals.uicount > P['uimax']:
+			warn('Warning',
+				 'UI Count exceeded @ %s\nPlease intervene.\n' % now(), wait=1)
+			app.globals.uicount = 0
+	else:
+		# Re-set the uicount after every good trial, so uimax can only
+		# be exceeded by a number of ui trials in a row.  Otherwise,
+		# the count would be cumulative
+		app.globals.uicount = 0
+	
+	# This is the end of RunTrial.  In RunSet, the call to RunTrial expects
+	# the 'result' variable to get returned, and this is how we do that:
+	return result
+
+def _RunTrial(app, P,t):
+	"""
+	_RunTrial actually does the behavioral control for the task and shows
+	whatever stimuli are specified, etc.  This is the meat of the task,
+	and this is where you're going to make changes to make the task do
+	what you want it to do. 
+	"""
+	
+	# # # # # # # # # # # # # # # # # #
+	# General setup stuff
+	# # # # # # # # # # # # # # # # # #
+	
+
+	# Create a second instance of Timer class (also in pype.py), which counts 
+	# milliseconds until it's reset. Can be queried without reset
+	t2 = Timer()
+	
+	# Draw a line at the beginning of every trial
+	con(app,">---------------------------")
+	# You can write anything you want to the console, and in color.
+	con(app,"Next trial",'blue')
+	
+	# Initialize default reaction time in case trial is aborted
+	rt = -1
+	
+	# Check for "testing" mode (rig params table; no eye or bar monitoring)
+	TESTING = int(P['testing'])
+	if TESTING:
+		# put a big red note on the console so I don't forget
+		con(app, 'TESTING','red')
+	
+	# Clear the user display before starting
+	app.udpy.display(None)
+	
+	# The dlist manages what gets shown on the screen, it gets
+	# re-initialized every trial.  app.fb is the framebuffer
+	app.globals.dlist = DisplayList(app.fb)
+	# set the background color - in this case, I've got a color defined
+	# for the intertrial interval
+	app.globals.dlist.bg = P['bg_before']
+	
+	# Update the dlist and flip the framebuffer
+	app.globals.dlist.update()
+	app.fb.flip()
+	# At this point, screen color is bg_before, and otherwise blank.
+	
+	# # # # # # # # # # # # # # # # # #
+	# Code for making a fixation spot
+	# # # # # # # # # # # # # # # # # #
+	 
+	# Fixation position at P['fix_x'] and P['fix_y'], which are in the
+	# monk_params table
+	fx, fy = P['fix_x'], P['fix_y']
+
+	# I'm not clear on what this does, but it has something to do with
+	# aligning the user display, and you need it.
+	app.looking_at(fx, fy)
+
+	# Here is some basic fixation point code. Depth sets the layer of sprite
+	# Always set fixspot to be layer 0; other stimuli to be layers below
+	# i.e. set depth higher for other stimuli Note that fix_size and 
+	# fix_ring are from monk_params, but fixspot color has to be 
+	# specified by the task.
+	
+	if P['fix_ring'] > 0:
+		# Create the sprite
+		spot = Sprite(2*P['fix_ring'], 2*P['fix_ring'],
+					  fx, fy, fb=app.fb, depth=0, on=0, centerorigin=1)
+		# fill the square with bg color
+		spot.fill(P['bg_during'])
+		# make a black circle of radius fix_ring at the center of the
+		# sprite
+		spot.circlefill((1,1,1), r=P['fix_ring'], x=0, y=0)
+		# and now for the actual fixation point...
+		if P['fix_size'] > 1:
+			# make another circle of radius fix_size
+			spot.circlefill(P['fixcolor1'], r=P['fix_size'], x=0, y=0)
+		else:
+			# just color the center pixel - r=1 doesn't work well
+			spot[0,0] = P['fixcolor1']
+	else:
+		# Create a sprite without the surrounding ring
+		spot = Sprite(2*P['fix_size'], 2*P['fix_size'],
+					  fx, fy, fb=app.fb, depth=0, on=0, centerorigin=1)
+		spot.fill(P['bg_during'])
+		if P['fix_size'] > 1:
+			spot.circlefill(P['fixcolor1'], r=P['fix_size'], x=0, y=0)
+		else:
+			spot[0,0] = P['fixcolor1']
+	
+	# This is redundant with on=0 above, but make sure the sprite is off
+	spot.off()
+	# Add spot to the dlist
+	app.globals.dlist.add(spot)
+	
+	# # # # # # # # # # # # # # # # # #
+	# Code for making the fixation window
+	# # # # # # # # # # # # # # # # # #
+	
+	# This is the virtual boundary that defines a "good" fixation,
+	# again only necessary if yours is a fixation task.
+	
+	# Adjust fixation window size for target eccentricity, since it's
+	# harder to fixate on more eccentric points and there's more
+	# eye tracker error too.  The min and max error parameters are
+	# task-specific.
+	min_e, max_e = P['min_err'], P['max_err']
+	r = ((fx**2)+(fy**2))**0.5
+	z = min_e + (max_e - min_e) * r / ((app.fb.w+app.fb.h)/4.0)
+	
+	# Set a parameter value that's the actual window size to use
+	# this trial, so it's saved in data file.
+	P['_winsize'] = int(round(P['win_size'] + z))
+	
+	# Create an instance of the FixWin class (defined in pype.py) that
+	# will actually keep track of the eye position for you
+	fixwin = FixWin(fx, fy, P['_winsize'], app)
+	fixwin.draw(color='grey') #draws the fixwin radius on user display
+
+    ##### Now create the visual stimuli
+	stim_arr = [] #empty list
+	mask_arr = [] #empty mask array
+	occl_arr = [] # empty occluder array
+	####This is for multiple stimulus presentation; number of stimuli to
+    ####be shown in this run is min of P['nstim'] and the number of
+	####stimuli left
+	scount = 0
+	sshow = min(P['nstim'], (len(app.globals.stimorder)-app.globals.start))
+	con(app,"%d stimuli presented, %d stimuli remaining" % (app.globals.start,len(app.globals.stimorder)-app.globals.start),"Black")
+	stimid = []
+	rotid = []
+	durid = []
+	occlid = []
+	modeid = []
+	while scount < sshow:
+		# create a sprite that is 2 times the specified RF size at 
+		# the specified RF location		
+		stim_arr.append(Sprite(app.globals.size*2, app.globals.size*2, P['RFx'], P['RFy'], \
+						  fb=app.fb, depth=1, on=0, centerorigin=1))
+		# First identify the stimulus id, rotation id, duration id, occlid and modeid to present
+		stimid.append(app.globals.stimid[app.globals.stimorder[app.globals.start+scount]])
+	    rotid.append(app.globals.rotid[app.globals.stimorder[app.globals.start+scount]])
+	    durid.append(app.globals.dur[app.globals.stimorder[app.globals.start+scount]])
+		occlid.append(app.globals.occl[app.globals.stimorder[app.globals.start+scount]])
+		modeid.append(app.globals.mode[app.globals.stimorder[app.globals.start+scount]])
+		# fill the square with bg color
+		stim_arr[scount].fill(P['bg_during'])
+		# now do the rest of the filling only if stimid is greater than 0 (since 0 is a blank stimulus
+		if stimid[scount] > 0:
+			coords = transpose(reshape(concatenate([app.globals.xv1[stimid[scount]-1][0:SV.nvrt[stimid[scount]-1]*50],\
+													app.globals.yv1[stimid[scount]-1][0:SV.nvrt[stimid[scount]-1]*50]]),\
+									   (2,50*SV.nvrt[stimid[scount]-1])))
+			stim_arr[scount].polygon(P['stimcolor1'], coords, width=0)
+			stim_arr[scount].rotate(360-rotid[scount])
+	    #####Draw an occluder if needed
+		if occlid[scount] != 0:
+			if modeid[scount] == 2:
+				occlclr = (P['bg_during'])
+			else:
+				occlclr = (P['occl_clr'])
+			if occlid[scount] < 7: # this is for rectangle/ellipse/diamond occluders
+				#X and Y center of the occluder
+				cx = cos(pi*P['occl_theta']/180.0)*P['occl_r']*app.globals.size/2.0
+				cy = sin(pi*P['occl_theta']/180.0)*P['occl_r']*app.globals.size/2.0
+				rotdeg = P['occl_theta']+((occlid[scount]-1)/3)*90
+				occlshape =(occlid[scount]-1)%3+1 #(1:rect, 2:ellipse; 3:diamond)
+				rect_ht = P['occl_size']*app.globals.size/2.0
+				rect_width = rect_ht*P['occl_aspect']
+				occl_arr.append(draw_occl(app, P['RFx']+cx, P['RFy']+cy, P['bg_during'], rect_ht, rect_width, occlshape,\
+										  occlclr, rotdeg))
+			else:
+				rotdeg = ((occlid[scount]-7)%5)*45
+				#patrnshape 1 = lines; 2 dots
+				if (occlid[scount]-7)%5 == 4:
+					patrnshape = 2
+				else:
+					patrnshape = 1
+				patrnwidth =(occlid[scount]-7)/5+1 #(1:low width; 2: medium; 3: high)
+				occl_arr.append(draw_patrn(app, P['RFx'], P['RFy'], P['bg_during'], app.globals.size*P['patrn_size'], \
+								app.globals.size*P['patrn_size'], patrnshape, patrnwidth, occlclr, rotdeg))
+		else: # fill this in any way so that there are scount entries in occl_arr
+			occl_arr.append(Sprite(app.globals.size*2, app.globals.size*2, P['RFx'], P['RFy'], \
+							fb=app.fb, depth=1, on=0, centerorigin=1))
+		if P['show_mask'] == 1:
+			### Then create mask stimuli
+			mask_arr.append(mask_create(app,app.globals.size*2.0,app.globals.size/1.5,P['RFx'],P['RFy'],\
+										P['bg_during'],P['numarcs'] ,P['min_rad'], P['arc_width']))
+			
+        app.globals.dlist.add(stim_arr[scount])
+        stim_arr[scount].off()
+		app.globals.dlist.add(occl_arr[scount])
+		occl_arr[scount].off()
+		if P['show_mask'] == 1:
+			app.globals.dlist.add(mask_arr[scount])
+			mask_arr[scount].off()
+		
+		app.globals.dlist.update()
+		scount = scount+1
+	# # # # # # # # # # # # # # # # # #
+	# Initiate the trial
+	# # # # # # # # # # # # # # # # # #
+
+	# Start monitoring the eye trace.  This encodes an 'eye_start' event
+	# in the datafile that will always be equal to the first timestamp
+	# at which eyetrace data are collected.
+	app.eyetrace(1)
+	# set background color to the color defined for during the trial
+	app.globals.dlist.bg = P['bg_during']
+	app.globals.dlist.update()
+	
+	# Note that we haven't flipped the framebuffer yet...
+	
+	# We put the entire trial inside a try statement 
+	# with exceptions to stop trial(correct, incorrect, aborted).
+	try:
+		# The idlefn method just lets the program do background
+		# maintenance stuff.  You can give idlefn an argument that
+		# specifies a number of milliseconds to wait
+		# Timer t was set at the very beginning of the trial,
+		# I want to know how long it's been since then.)
+		app.idlefn(P['iti']-t.ms())
+	    app.encode_plex(END_ITI)
+        #remember we already encoded START_ITI
+		
+		# Reset this timer to zero
+		t.reset()
+		
+		# Flip the framebuffer to show the current dlist
+		app.fb.flip()
+
+		fixwin.draw(color='red')
+		ttt = fixwin.on()
+		# Now the background color is bg_during
+		# set a little dummy flag to keep track of stuff
+		spot_on=0
+		# When we get here either the bar has been grabbed or we're not
+		# monitoring it.  If the fixation point is not already
+		# on, we'll turn it on now.
+		if not spot_on:
+			spot.on()
+			app.globals.dlist.update()
+			app.fb.flip()
+			#app.encode_plex(FIX_ON)
+			app.udpy.display(app.globals.dlist)
+			spot_on=1
+		# Now we're waiting for the subject to acquire the fixation point
+		info(app, "waiting fix acquisition")
+		app.idlefn()
+		t.reset()
+		# Again, a dummy flag to help with task control
+		go_on = 0
+		while not go_on:
+			# We are waiting for the eye position to move inside the
+			# fixation window.  Whether this is the case is one of
+			# the things that the FixWin class keeps track of.
+			while not fixwin.inside() and not TESTING:
+				# We use the same abortafter limit again
+				if P['abortafter'] > 0 and t.ms() > P['abortafter']:
+					info(app, "no acquisition")
+					con(app, "no acquisition", 'blue')
+					result = UNINITIATED_TRIAL
+					beep(2000,100)
+					raise MonkError
+				app.idlefn()
+			# At this point, the fixwin.inside returned 1 (meaning eye
+			# is inside window).  Sometimes if the spot has just come
+			# on and the subject is in the process of saccading across
+			# the screen, the eye position will go through the fixwin.
+			# Only count this as acquiring fixation if the eye stays in
+			# the window for "fixwait" milliseconds.
+			t2.reset()
+			# First, assume we will continue if eye stays in window
+			go_on = 1
+			while t2.ms() < P['fixwait']:
+				if not fixwin.inside() and not TESTING:
+					# If at any time during the fixwait the eye
+					# moves back out of the window, go back to waiting
+					# for the eye to enter the window again.
+					info(app, "passthrough")
+					go_on = 0
+					# This resets fixwin.inside back to zero
+					fixwin.reset()
+					# This exits the innermost while loop, and sends
+					# us back to the top of the "while not go_on"
+					# loop
+					break
+
+		# # # # # # # # # # # # # # # # # #
+		# Do real trial stuff
+		# # # # # # # # # # # # # # # # # #
+	
+		# Now, fixation has been acquired.  We can start timing the
+		# length of the fixation.
+		t.reset() # Reset the timer to monitor fixation length
+		t2.reset() # Using t2 as absolute timer for trial length
+		app.encode_plex(FIX_ACQUIRED)
+		fixwin.draw(color='blue') # Blue is our "active" fixwin color
+
+		####This is for multiple stimulus presentation; number of stimuli to
+		####be shown in this run is min of P['nstim'] and the number of
+		####sttimuli left
+		scount = 0
+		while scount < sshow:
+			app.encode_plex('stimid')
+			app.encode_plex(stimid[scount]+app.globals.plexStimIDOffset)
+			app.encode_plex('rotid')
+			app.encode_plex(rotid[scount]+app.globals.plexRotOffset)
+			app.encode_plex('stimdur')
+			app.encode_plex(durid[scount]+app.globals.plexStimIDOffset)
+			app.encode_plex('occlshape')
+			app.encode_plex(occlid[scount]+app.globals.plexStimIDOffset)
+			app.encode_plex('occlmode')
+			app.encode_plex(modeid[scount]+app.globals.plexStimIDOffset)
+			while t.ms() < P['IStime']:
+				if fixwin.broke() and not TESTING:
+					app.encode_plex(FIX_LOST)
+					info(app, "early break")
+					con(app, "early break (%d ms)" % t2.ms(), 'red')
+					result = BREAK_FIX
+					# Auditory feedback
+					app.warn_trial_incorrect(flash=None)
+					# Skip to end of trial
+					raise MonkError
+				# Again, a call to idlefn lets the computer catch up
+				# and monitor for key presses.
+				app.idlefn()
+			# now turn on the stimulus
+			stim_arr[scount].on()
+			# if there is an occluder turn that on as well
+			if occlid[scount] != 0:
+				occl_arr[scount].on()
+			toggle_photo_diode(app) #note: toggle_photo_diode updates the dlist
+			app.fb.flip()
+			if scount != 0:
+				if P['show_mask'] == 1:
+					app.encode_plex('mask_off')
+			app.encode_plex(SAMPLE_ON)
+			app.udpy.display(app.globals.dlist)
+
+			# wait for stimulus time
+			t.reset()
+			while t.ms() < durid[scount]:
+				if fixwin.broke() and not TESTING:
+					app.encode_plex(FIX_LOST)
+					info(app, "early break")
+					con(app, "early break (%d ms)" % t2.ms(), 'red')
+					result = BREAK_FIX
+					app.warn_trial_incorrect(flash=None)
+					#turn off stimuli
+					stim_arr[scount].off()
+					if occlid[scount] != 0:
+						occl_arr[scount].off()
+						app.globals.dlist.delete(occl_arr[scount])
+					app.globals.dlist.delete(stim_arr[scount])
+					app.globals.dlist.update()
+					app.fb.flip()
+					# Skip to end of trial
+					raise MonkError
+				# Again, a call to idlefn lets the computer catch up
+				# and monitor for key presses.
+				app.idlefn()
+			# now turn off stimulus
+			stim_arr[scount].off()
+			app.globals.dlist.delete(stim_arr[scount])
+			if occlid[scount] != 0:
+				occl_arr[scount].off()
+			if P['show_mask'] == 1:
+				mask_arr[scount].on()
+			toggle_photo_diode(app) #note: toggle_photo_diode update dlist
+			app.fb.flip()
+			t.reset() # Reset timer to start isi timer
+			app.encode_plex(SAMPLE_OFF)
+			if P['show_mask'] == 1:
+				app.encode_plex('mask_on')
+			app.globals.start = app.globals.start+1
+			scount = scount+1
+		
+################################
+		# If you are here then we need to present another ISTime (for the mask)
+		if P['show_mask'] == 1:
+			while t.ms() < P['IStime']:
+				if fixwin.broke() and not TESTING:
+				    #turn off mask
+					mask_arr[scount-1].off()
+					app.globals.dlist.delete(mask_arr[scount-1])
+					app.globals.dlist.update()
+					app.fb.flip()
+					app.encode(FIX_LOST) #standard event code
+					app.encode_plex(FIX_LOST)
+					info(app, "early break")
+					con(app, "early break (%d ms)" % t2.ms(), 'red')
+					result = BREAK_FIX
+					# Auditory feedback
+					app.warn_trial_incorrect(flash=None)
+					# Skip to end of trial
+					raise MonkError
+				# Again, a call to idlefn lets the computer catch up
+				# and monitor for key presses.
+				app.idlefn()
+			#turn off mask
+			mask_arr[scount-1].off()
+			app.globals.dlist.delete(mask_arr[scount-1])
+			app.globals.dlist.update()
+			app.fb.flip()
+			app.encode_plex('mask_off')
+			#if we are here trial is correct
+		raise NoProblem
+
+	# # # # # # # # # # # # # # # # # #
+	# Handling exceptions generated in the trial
+	# # # # # # # # # # # # # # # # # #
+	
+	except UserAbort:
+		# If you pressed the escape key at any time to abort the trial
+		# you will end up here.  No counters are incremented or
+		# reset basically because this was not the subject's fault.
+		# Turn off the fixation spot and tracker dot
+		spot.off()
+
+		# Stop monitoring eye position, encode 'eye_stop' in the datafile
+		# which will always be the last timestamp at which eyetrace data
+		# were collected.
+		fixwin.clear()
+		app.eyetrace(0)
+
+		# Re-set the background for the intertrial interval
+		app.globals.dlist.bg = P['bg_before']
+		turn_off_photo_diode(app)
+		app.fb.flip()
+
+		result = USER_ABORT
+		app.encode_plex(result)
+		t.reset()
+		app.encode_plex(START_ITI)
+		con(app, "Aborted.", 'red')
+
+	except MonkError:
+		# Any of the MonkError exceptions will land you here.  The
+		# trial counter is incremented and the seqcorrect counter
+		# is reset.
+		spot.off()
+		# Stop monitoring eye position, encode 'eye_stop' in the datafile
+		# which will always be the last timestamp at which eyetrace data
+		# were collected.
+		fixwin.clear()
+		app.eyetrace(0)
+		# Re-set the background for the intertrial interval
+		app.globals.dlist.bg = P['bg_before']
+		app.globals.dlist.update()
+		turn_off_photo_diode(app)
+		app.fb.flip()
+
+		app.encode_plex(result)
+		t.reset()
+		app.encode_plex(START_ITI)
+		app.globals.ntrials = app.globals.ntrials + 1
+		
+	except NoProblem:
+		# Having an exception for a correct trial is handy because
+		# there are a number of ways of getting the trial correct
+		# depending on whether we're monitoring the eye position or
+		# touch bar or dot dimming, and we can put all the reward
+		# code in one place.
+
+
+			# Turn off the fixation spot and tracker dot
+		spot.off()
+		#app.encode(FIX_OFF)
+		#app.encode_plex(FIX_OFF)
+
+		# Stop monitoring eye position, encode 'eye_stop' in the datafile
+		# which will always be the last timestamp at which eyetrace data
+		# were collected.
+		fixwin.clear()
+		app.eyetrace(0)
+		#app.encode_plex(EYE_STOP)
+
+		# Re-set the background for the intertrial interval
+		app.globals.dlist.bg = P['bg_before']
+		app.globals.dlist.update()
+		turn_off_photo_diode(app)
+		app.fb.flip()
+
+		result = CORRECT_RESPONSE
+		app.encode_plex(CORRECT_RESPONSE)
+		
+		# Without arguments this call dispenses a reward of size
+	    # 'dropsize' with a variance of 'dropvar' (both specified
+		# in monk_params). The multiplier argument multiplies the
+		# "standard" reward by whatever value is passed in.
+		clk_num = P['numdrops']
+		while clk_num > 0:
+			app.reward(multiplier=P['rmult'])
+			app.idlefn(50)#time between juice drops
+			clk_num = clk_num-1
+		
+		t.reset()
+		app.encode_plex(START_ITI)
+
+		# Reporting stuff, variables returned to RunTrial
+		app.globals.ncorrect = app.globals.ncorrect + 1
+		app.globals.ntrials = app.globals.ntrials + 1
+	
+	# # # # # # # # # # # # # # # # # #
+	# Cleanup
+	# # # # # # # # # # # # # # # # # #
+	
+	# This code runs no matter what the result was, it is after all the
+	# exception handling
+
+	# Clear the user display
+	app.udpy.display(None)
+
+	# update behavioral history log on GUI window
+	app.history(result[0])
+
+	# If this was an incorrect trial, wait for the timeout period
+	# (we do this now so that everything has been shut off and the
+	# background is not the "active" color during the timeout
+	# period).
+	if result != CORRECT_RESPONSE:
+		if P['timeout'] > 0:
+			info(app, "error timeout..")
+			app.idlefn(ms=P['timeout'])
+			info(app, "done.")
+
+	# Don't know what this does.  Don't touch.
+	app.looking_at()
+	
+	# Update the performance tally on the pype control window.
+	app.tally(type=result)
+
+	# Return variables to RunTrial for housekeeping.
+	return (result, rt, P)
+
+def mask_create(app, spritesize, ctrlimit, spriteposx, spriteposy, spriteclr, numarcs, min_rad, arc_width):
+	"""
+	This is a function to create mask with many (=numarcs) arcs of random
+	raidus, orientation and color in the sprite that's of the specified size
+	and at the specified position within a certain xy position space =ctrlimit
+	"""
+	mask_sprite = (Sprite(int(spritesize), int(spritesize), spriteposx, spriteposy, \
+						  fb=app.fb, depth=1, on=0, centerorigin=1))
+	mask_sprite.fill(spriteclr)
+	arc_ct = 0
+	while arc_ct < numarcs:
+		#find a random x position and y position
+		rndx = int(ctrlimit*(random()-0.5))
+		rndy = int(ctrlimit*(random()-0.5))
+		#rand color
+		rndclr = (int(184*random()), int(91*random()), int(255*random()))
+		#rand start and end angles
+		rnd_ang = (random()*2*pi, random()*2*pi)
+		#rand x and y radii
+		rnd_rx = min_rad + int((ctrlimit-min_rad)*random())
+		rnd_ry = min_rad + int((ctrlimit-min_rad)*random())
+		mask_sprite.arc(rndclr,rnd_rx,rnd_ry,rndx,rndy,min(rnd_ang),max(rnd_ang),width=arc_width)
+		arc_ct = arc_ct+1		
+	return mask_sprite
+	
+def draw_occl(app, spritex, spritey, spriteclr, spriteh, spritew, occlshape, occlclr, occlrot):				
+	"""
+	This function creates a sprite with an occluder that's a rect, ellipse or diamond.
+	The rest of the sprite surface is transparent
+	"""
+	occl_sprite = Sprite(int(spritew), int(spriteh), spritex, spritey, fb=app.fb, depth=1, on=0, centerorigin=1)
+	occl_sprite.fill(spriteclr+(0,)) # make sprite transparent
+	#draw the appropriate occluder
+	if occlshape == 1: # draw a rectangle
+		occl_sprite.fill(occlclr+(255,))
+	elif occlshape == 2: # draw an ellipse
+		occl_sprite.ellipse(occlclr+(255,), spritew, spriteh, 0, 0)
+	elif occlshape == 3: # draw a diamond
+		verts = [[spritew/2.0,0],[0,spriteh/2.0],[-spritew/2.0,0],[0,-spriteh/2.0]]
+		occl_sprite.polygon(occlclr+(255,), verts)
+	print occlrot
+	occl_sprite.rotate(360-occlrot, preserve_size=0)
+	return occl_sprite
+
+def draw_patrn(app, spritex, spritey, spriteclr, spriteh, spritew, patrnshape, patrnwidth, occlclr, occlrot):
+	"""
+	This function creates and returns a pattern occluder sprite. Parallel lines, random dots 
+	and arcs are the three options. Rest of the sprite is transparent
+	"""
+	numlines = 9 #keep this odd
+	numdots = 81
+	numarcs = 49
+	patrn_sprite = Sprite(int(spritew), int(spriteh), spritex, spritey, fb=app.fb, depth=1, on=0, centerorigin=1)
+	patrn_sprite.fill(spriteclr+(0,)) # make sprite transparent
+	spacing = spriteh/float(numlines)
+	w = (spacing/6.0)*patrnwidth# dia of circles/arc width/linewidth
+	#draw the appropriate occluder
+	if patrnshape == 1: # draw parallel lines
+		for i in range(numlines):
+			patrn_sprite.rect(0, -spacing*(numlines-1)/2.0+spacing*i, spritew, w, occlclr+(255,))
+		patrn_sprite.rotate(360-occlrot, preserve_size=0)
+	elif patrnshape == 2: # draw random dots
+		#	for i in range(numdots):
+		#		rndx = int(spritew*(random()-0.5)/2.0)
+		#		rndy = int(spriteh*(random()-0.5)/2.0)
+		#		patrn_sprite.circlefill(occlclr+(255,),int(w),rndx,rndy)
+		#trying pseudorandom dots
+		for i in range(int(sqrt(numdots))):
+			xpos = -spacing*(sqrt(numdots)-1)/2.0+spacing*i
+			for j in range(int(sqrt(numdots))):
+				ypos = -spacing*(sqrt(numdots)-1)/2.0+spacing*j
+				#random xy jitter
+				rndx = int(spacing*(random()-0.5)/2.0)
+				rndy = int(spacing*(random()-0.5)/2.0)
+				patrn_sprite.circlefill(occlclr+(255,),int(w), int(xpos+rndx), int(ypos+rndy))
+	elif patrnshape == 3: # semicircular arcs of random orientation
+		#	for i in range(numarcs):
+		#	#find a random x position and y position
+		#	rndx = int(spritew*(random()-0.5)/2.0)
+		#	rndy = int(spriteh*(random()-0.5)/2.0)
+		#	#rand start ang
+		#	rnd_start = random()*2*pi
+		#	patrn_sprite.arc(occlclr+(255,),int(2.0*w),int(2.0*w),rndx,rndy,rnd_start,rnd_start+pi,width=int(w/2.0))	
+		#trying pseudo random
+		for i in range(int(sqrt(numarcs))):
+			xpos = -spacing*(sqrt(numarcs)-1)/2.0+spacing*i
+			for j in range(int(sqrt(numarcs))):
+				ypos = -spacing*(sqrt(numarcs)-1)/2.0+spacing*j
+				#random start angle
+				rndx = int(spritew*(random()-0.5)/2.0)
+				#	rndy = int(spriteh*(random()-0.5)/2.0)
+				#rand start ang
+				rnd_start = random()*2*pi
+				patrn_sprite.arc(occlclr+(255,),int(4.0*w),int(4.0*w),xpos,ypos,rnd_start,rnd_start+pi,width=2)	
+	return patrn_sprite
+
+def toggle_photo_diode(app):
+	app.globals.dlist.update()
+	app.fb.sync_toggle()
+
+def turn_off_photo_diode(app):
+	app.fb.sync(0)
+	
+def main(app):
+	"""
+	Every python program with multiple functions needs to have a main
+	function.  This sets up the parameter table, initializes app.globals,
+	and defines RunSet as the start function.  You will need to mess
+	with the parameter table to add new parameters for your task and
+	remove useless ones, but beyond that don't change things in this
+	function unless you're *really* sure you know what you're doing.
+	"""
+
+	# Initialize things
+	app.globals = Holder()
+	app.idlefb()
+	app.startfn = RunSet
+	app.mybutton = app.taskbutton(text=__name__, check=1)
+	app.notebook = DockWindow(title=__name__, checkbutton=app.mybutton)
+	parfile = app.taskname()
+	# Look for an existing saved parameter file for this task
+	if parfile:
+		parfile = parfile + '.par'
+
+	# Initialization and default values for the parameters.  Each row is
+	# one parameter.  The first value is the name of the parameter, the
+	# second is its default value, the third defines the type of
+	# the value (more on that later) and the fourth is optional and
+	# is a descriptive label that pops up when you hold the mouse over
+	# that entry in the table.  There are numerous standard parameter
+	# types, the most common are self-explanatory.  is_color needs to be
+	# 3 or 4 numbers in tuple format, e.g. (255,1,1) for red; the 4th
+	# number is optional and is an alpha value (if left off, assumed
+	# to be 255).  (0,0,0) is a special code for transparent or for
+	# white noise fill pattern, depending on the task, so use (1,1,1)
+	# for black.  is_any just gets passed as a string, this is what
+	# to use if you need a list of numbers.  is_iparam can take a
+	# variance value as either a percentage or an actual number of
+	# units, so you'd have "1000+-10%" or "150+-50".  There are a ton of
+	# others defined in ptable.py.  Values of None for default value and
+	# type make that row into a heading of sorts that can be helpful for
+	# organizing a large number of parameters.
+	
+	app.params = ParamTable(app.notebook, (
+		("Subject Params", None, None),
+		("usebar",	    "1",		   	is_boolean,),
+		("trial_tone",	"1",		   	is_boolean, "tone at every trial"),
+		("grabbeep",	"1",		   	is_boolean, "beep at bar grab"),
+		("barfirst",	"1",		   	is_boolean, "grab bar before fixspot"),
+		("Reward Params", None, None),
+		("numdrops",    "8",            is_int, "Number of drops per trial"),
+		("rmult",		"1.0",		   	is_float),
+		("seqcor",      "2",            is_int),
+		("seqcor_reset","1",            is_boolean),
+		("allornone",   "1",            is_float, "0->1, prob of drop"),
+		("Dot Dimming Params", None, None),
+		("dim",	        "1",			is_boolean, "do dot dimming?"),
+		("fixcolor1",	"(255,255,255)",is_color),
+		("maxrt",       "500",          is_int),
+		("Stimulus Param", None, None),
+		("RFx",         "0",        is_int, "Stimulus location:X"),
+		("RFy",         "0",        is_int, "Stimulus location:Y"),
+		("stimcolor1",  "(255, 0, 0)",      is_color),
+		("Task Params", None, None),
+		("allstim", "1",       is_int, "All (1) subset (2) or stimuli listed below (3) to test"),
+		("stimnum","[]",    is_any, "Stimulus numbers to test(1-36)"),
+		("rotnum","[]",     is_any, "Stimulus rotations(in degs)"),
+		("stimdur","()",    is_any, "Stimulus durations to test"),
+		("Occluder Params", None, None),
+		("show_occl", "1",     is_boolean, "Show occluder?"),
+		("occl_clr", "(64,64,64)", is_color, "Occluder Color"),
+		("occl_alone", "1",		is_boolean, "Show occluder alone?"),
+		("Single occluder params", None, None),
+		("occl_shape", "[]",  is_any, "1-3 (Tangential rect,ellipse,diamond); 4-6 Radial rect ellipse, diamond"),
+		("occl_r", "1.0", is_float, "Occluder position in RFrad units rel. to RFcenter"),
+		("occl_theta", "45.0", is_angle_degree, "Theta position in degrees"),
+		("occl_size", "1.0", is_float, "Diameter of circle or rectangle height in RF rad units"),
+		("occl_aspect", "0.5", is_float, "Aspect ratio of rectangle occluder"),
+		("occl_mode", "[1,2]", is_any, "1.Occl(of chosen color), 2.Occl of bkg color"),
+		("Pattern occluder params", None, None),
+		("patrn_shape", "[]", is_any, "7-10(lines(0,45,90,135rots low width),11:dots,of low width; 12-16 lines and dots medium width; 17-21high width"),
+		("patrn_size", "1.0", is_float, "Occluder sprite size in RF Diameter units"),
+		("patrn_mode", "[1]", is_any, "1:Occl of chosen color, 2:Occl of bkg color"),
+		('show_mask', "1", is_boolean, "Show mask?"),
+		('numarcs', "8", is_int, "Number of arcs per mask"),
+		('min_rad', "30", is_int, "Minimum radius of arcs"),
+		('arc_width', "5", is_int, "Width of the arcs in mask"),
+		("stimreps", "5",   is_int, "Number of stimulus repetitions"),
+		("objalonereps", "15", is_int, "Number of object alone reps"),
+		("IStime",	"200",		   	is_int, "Inter-stimulus interval"),
+		("nstim",	"5",			is_int, "Number of stimuli"),
+		("min_err",		"0",		   	is_int),
+		("max_err",		"100",		   	is_int),
+		("bg_before",	"(64,64,64)",	   	is_color),
+		("bg_during",	"(64,64,64)",is_color),
+		("fixlag",		"50",		   	is_int),
+		("fixwait",		"100",		   	is_int),
+		("Eye Params", None, None),
+		("innerwin",	"0",		   	is_int),
+		("track",		"0",		   	is_boolean),
+		("track_xo",   	"0",		   	is_int, "offset of track point"),
+		("track_yo",   	"0",		   	is_int, "offset of track point"),
+		("track_color", "(255,255,0)", 	is_color),
+		("Misc Params", None, None, "Miscelaneous Parameters"),
+		("Recent Buffer Size", "50", is_int, "The number of trials to use to calculate recent performance"),
+		("pause_color", "(150,0,0)", is_color, "The screen will turn this color when the task is paused"),
+		("randomize", "1", is_int, "Randomize? yes:1; no:0")
+		), file=parfile)
+
+		
+def cleanup(app):
+	"""
+	This is not run from within the program anywhere, but I believe
+	it is necessary because every task has one.  Perhaps it is called
+	by pype itself when the task is unloaded.
+	"""
+	app.params.save()
+	app.mybutton.destroy()
+	app.notebook.destroy()
+	# The dlist should get deleted as part of cleanup, or else all
+	# the sprites remain in memory when the task is unloaded.  In
+	# this task dlist is part of app.globals.  In tasks where users
+	# have chosen not to use app.globals, they need to add a line
+	# here to delete the dlist explicitly.
+	del app.globals
+
+
+# This is also something that all tasks have, and it's a python thing.
+# Don't touch it.
+
+if not __name__ == '__main__':
+	loadwarn(__name__)
+else:
+	dump(sys.argv[1])
