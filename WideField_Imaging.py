@@ -121,19 +121,22 @@ class WideField_Imaging:
         self.shift_per_frame = PixPerCyc * TF / self.mon_Hz; 
 
         gratingMtx = np.cos(RadPerPix*xx); 
-        mask_pos = gratingMtx > 0
-        mask_neg = gratingMtx < 0
+        mask_pos = gratingMtx >= 0
+        mask_neg = gratingMtx <  0
         #row_c1, col_c1 = np.where(gratingMtx>0); 
         #row_c2, col_c2 = np.where(gratingMtx<0); 
 
-        WK_mtx = 255*np.ones((square_height, square_width, 3), dtype=np.uint8);  # RGBA
-        WK_mtx[mask_neg] = 0; 
+        #WK_mtx = 255*np.ones((square_height, square_width, 3), dtype=np.uint8);  # RGBA
+        WK_mtx = np.zeros((square_height, square_width, 3), dtype=np.uint8); 
+        WK_mtx[mask_pos, :3] = 172  # White Y=56.74
+        WK_mtx[mask_neg, :3] =   1  # Black Y= 0.14 Note (0,0,0) will cause transparent!!
+        #WK_mtx[mask_neg] = 0; 
         #WK_mtx[row_c1, col_c1, :3] = 255; 
         #WK_mtx[row_c2, col_c2, :3] = 0; 
 
         RG_mtx = np.zeros((square_height, square_width, 3), dtype=np.uint8); 
-        RG_mtx[mask_pos, 0] = 255  # Red
-        RG_mtx[mask_neg, 1] = 255  # Green
+        RG_mtx[mask_pos, 0] = 255   # Red   Y=28.17
+        RG_mtx[mask_neg, 1] = 146   # Green Y=28.24
 
         """
         # give Red color
@@ -281,8 +284,8 @@ class WideField_Imaging:
             ("randomize_stimuli", 1, is_boolean, "Whether or not to randomize stimuli within repetitions."),                                                                   
             ("nRepsPerStim", "10", is_int, "Number of repetitions of each stimulus to present"),
             ("Task Params", None, None),            
-            ("bg_before", "(50, 50, 50)", is_color, "The background color before stimulus presentation"),            
-            ("bg_during", "(50, 50, 50)", is_color, "The background color during stimulus presentation"),
+            ("bg_before", "(125, 125, 125)", is_color, "The background color before stimulus presentation"),            
+            ("bg_during", "(125, 125, 125)", is_color, "The background color during stimulus presentation"),
             ("iti", "2000", is_int, "Inter-trial interval"),
             ("stimon", "2000", is_int, "Inter-trial interval"),            
             ("IStime", "1000", is_int, "Inter-stimulus interval"),
@@ -309,7 +312,14 @@ class WideField_Imaging:
             #("Iteration","01", is_int, "# of times this task has been run on this cell group"),
             ("Misc Params", None, None, "Miscelaneous Parameters"),
             ("Recent Buffer Size", "50", is_int, "The number of trials to use5 to calculate recent performance"),
-            ("pause_color", "(40,40,40)", is_color, "The screen will turn this color when the task is paused")
+            ("pause_color", "(40,40,40)", is_color, "The screen will turn this color when the task is paused"),
+            ("Chenghang's Params", None, None),
+            ("Con_reward",  "1",		   	is_boolean, "Do you want reward during fixation"),
+            ("Reward_interval",	"400",		   	is_int, "interval of reward in ms"),
+            ("Reward_rand",	"0",		   	is_boolean, "Have the reward +random(Reward_rand_range)"),
+            ("Reward_rand_range", "5",		   	is_int, "Number of drop added or substracted from reward"),
+            ("Random_hold",	"0",		   	is_boolean, "Random fixation hold, a Gauss distribution determined by mu"),
+            ("Random_hold_sigma", "100",		   	is_int, "Random change to the fixation druation. In ms. "),
             ), file=parfile)
 
 
