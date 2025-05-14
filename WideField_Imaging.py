@@ -20,7 +20,6 @@ Stimulus parameters
 @author: Taekjun Kim
 """
 
-
 #%%
 import os, sys, types   ## os is needed to specify file location
 from pype import *
@@ -298,7 +297,7 @@ class WideField_Imaging:
             ("Fixation Params", None, None, "Fixation Parameters"),
             ("fixcolor1", "(255,255,255)",is_color, 'Color of the fixation dot'),
             ("fixcolor2", "(128,128,128)",is_color),
-            ("fixwait", "100", is_int),
+            ("fixwait", "100", is_int,"Wait this time for fixation until the stimuli shows up"),
             ("Stim_delay", "100", is_int),            
             ("min_err", "0", is_int),
             ("max_err", "100", is_int),
@@ -878,7 +877,7 @@ class WideField_Imaging:
                 # First, assume we will continue if eye stays in window
                 go_on = 1
                 while t2.ms() < params['fixwait']:
-                    if not fixwin.inside() and not TESTING:
+                    if not fixwin.inside():
                         # If at any time during the fixwait the eye
                         # moves back out of the window, go back to waiting
                         # for the eye to enter the window again.
