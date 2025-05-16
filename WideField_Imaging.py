@@ -315,10 +315,6 @@ class WideField_Imaging:
             ("Chenghang's Params", None, None),
             ("Con_reward",  "1",		   	is_boolean, "Do you want reward during fixation"),
             ("Reward_interval",	"400",		   	is_int, "interval of reward in ms"),
-            ("Reward_rand",	"0",		   	is_boolean, "Have the reward +random(Reward_rand_range)"),
-            ("Reward_rand_range", "5",		   	is_int, "Number of drop added or substracted from reward"),
-            ("Random_hold",	"0",		   	is_boolean, "Random fixation hold, a Gauss distribution determined by mu"),
-            ("Random_hold_sigma", "100",		   	is_int, "Random change to the fixation druation. In ms. "),
             ), file=parfile)
 
 
@@ -908,6 +904,7 @@ class WideField_Imaging:
             ####be shown in this run is min of P['nstim'] and the number of
             ####stimuli left
             scount = 0
+            last_reward_time = t2.ms()
             while scount < sshow:
                 P = self.myTaskParams.check(mergewith=app.getcommon())
                 self.encodeISI(app,scount+stm_start)
@@ -927,6 +924,16 @@ class WideField_Imaging:
                     # Again, a call to idlefn lets the computer catch up
                     # and monitor for key presses.
                     app.idlefn()
+                    
+                    if P['Con_reward'] == 1:
+                        #con(app, "current_time (%d ms)" % t.ms(), 'red')
+                        #con(app, "last_reward time (%d ms)" % last_reward_time, 'red')
+                        #con(app, "TimeDIff =  (%d ms)" % (t.ms() - last_reward_time), 'red')
+                        if (t2.ms() - last_reward_time) >= P['Reward_interval']:
+                            if fixwin.inside():
+                                app.reward(1)
+                                con(app, "Giving reward")
+                                last_reward_time = t2.ms()
 
                 # now display stimulus 
                 # now turn it on put it on the dlist; update and flip buffer
@@ -936,7 +943,7 @@ class WideField_Imaging:
                 self.toggle_photo_diode(app) #note: toggle_photo_diode updates the dlist
                 app.encode_plex(SAMPLE_ON)
                 app.encode(SAMPLE_ON)
-                app.fb.flip()                                 
+                app.fb.flip()
                 #app.udpy.display(app.globals.dlist)
 
                 # wait for stimulus time
