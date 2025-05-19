@@ -970,7 +970,16 @@ class WideField_Imaging:
                     stim_arr[scount][foff%uniq_frames].off();                     
                     stim_arr[scount][fon%uniq_frames].on(); 
                     app.globals.dlist.update()                    
-                    app.fb.flip()                        
+                    app.fb.flip()
+                    if P['Con_reward'] == 1:
+                        #con(app, "current_time (%d ms)" % t.ms(), 'red')
+                        #con(app, "last_reward time (%d ms)" % last_reward_time, 'red')
+                        #con(app, "TimeDIff =  (%d ms)" % (t.ms() - last_reward_time), 'red')
+                        if (t2.ms() - last_reward_time) >= P['Reward_interval']:
+                            if fixwin.inside():
+                                app.reward(1)
+                                con(app, "Giving reward")
+                                last_reward_time = t2.ms()
                     
                 # Again, a call to idlefn lets the computer catch up
                 # and monitor for key presses.
