@@ -108,7 +108,8 @@ class WF_RFmap:
             for k in np.arange(0,self.Numframes):
                 s[k] = createBar(30, 30, myFB,myBG, 0, myX, myY, myBG)
             self.mySprites.append(s)
-
+        #When thers is nBlanks = 1, len(self.mySprites = 2)
+	
         ### Trial table
         stim_table = pd.DataFrame(); 
         stim_table['id'] = np.nan; 
@@ -133,11 +134,14 @@ class WF_RFmap:
 
         numUniqueStims = N_conds
         stimNumbers = np.arange(0,numUniqueStims)
+        con(app,"numUniqueStims = %d" % (numUniqueStims),"red")
+        con(app,"len my sprites = %d" % (len(self.mySprites)),"red")
         for i in np.arange(0,params['nRepsPerStim']):
             if (randomize_stims):
                 shuffle(stimNumbers)
             self.id_shuffled.extend(stimNumbers)
             self.numStim = self.numStim + len(self.mySprites)
+        con(app,"numStim = %d" % (self.numStim),"red")
 
         ## these are the stim params that need to be encoded before start of task
         self.myFB = myFB
@@ -561,9 +565,9 @@ class WF_RFmap:
 	
         # Check for "testing" mode (rig params table; no eye or bar monitoring)
         TESTING = int(P['testing'])
-        if TESTING:
+        #if TESTING:
            # put a big red note on the console so I don't forget
-           con(app, 'TESTING','red')
+           #con(app, 'TESTING','red')
 	
         # Clear the user display before starting
         app.udpy.display(None)
@@ -752,7 +756,7 @@ class WF_RFmap:
                 # We are waiting for the eye position to move inside the
                 # fixation window.  Whether this is the case is one of
                 # the things that the FixWin class keeps track of.
-                while not fixwin.inside() and not TESTING:
+                while not fixwin.inside():
                     # We use the same abortafter limit again
                     if P['abortafter'] > 0 and t.ms() > P['abortafter']:
                         p_info(app, "no acquisition")
@@ -773,7 +777,7 @@ class WF_RFmap:
                 # First, assume we will continue if eye stays in window
                 go_on = 1
                 while t2.ms() < params['fixwait']:
-                    if not fixwin.inside() and not TESTING:
+                    if not fixwin.inside():
                         # If at any time during the fixwait the eye
                         # moves back out of the window, go back to waiting
                         # for the eye to enter the window again.
@@ -808,7 +812,7 @@ class WF_RFmap:
                 P = self.myTaskParams.check(mergewith=app.getcommon())
                 self.encodeISI(app,scount+stm_start)
                 while t.ms() < params['IStime']:
-                    if fixwin.broke() and not TESTING:
+                    if fixwin.broke():
                         #app.encode(FIX_LOST) #standard event code
                         app.encode_plex(FIX_LOST)
                         app.encode(FIX_LOST)
@@ -871,7 +875,7 @@ class WF_RFmap:
                 """
                 fon = 0; 
                 while fon < self.mon_Hz*params['stimon']/1000-1:
-                    if fixwin.broke() and not TESTING:
+                    if fixwin.broke():
                         app.encode(FIX_LOST) #standard event code
                         app.encode_plex(FIX_LOST)
 
