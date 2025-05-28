@@ -134,14 +134,15 @@ class WF_RFmap:
 
         numUniqueStims = N_conds
         stimNumbers = np.arange(0,numUniqueStims)
-        con(app,"numUniqueStims = %d" % (numUniqueStims),"red")
-        con(app,"len my sprites = %d" % (len(self.mySprites)),"red")
+        #con(app,"numUniqueStims = %d" % (numUniqueStims),"red")
+        #con(app,"len my sprites = %d" % (len(self.mySprites)),"red")
         for i in np.arange(0,params['nRepsPerStim']):
             if (randomize_stims):
                 shuffle(stimNumbers)
             self.id_shuffled.extend(stimNumbers)
-            self.numStim = self.numStim + len(self.mySprites)
-        con(app,"numStim = %d" % (self.numStim),"red")
+            #self.numStim = self.numStim + len(self.mySprites)
+            self.numStim = self.numStim + numUniqueStims
+        #con(app,"numStim = %d" % (self.numStim),"red")
 
         ## these are the stim params that need to be encoded before start of task
         self.myFB = myFB
