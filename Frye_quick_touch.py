@@ -24,7 +24,8 @@ def main(app):
     app.idlefb()
     app.startfn = RunSet
 
-def gettouch(wait=None):
+def gettouch(wait=999999):
+    t = Timer()
     touch_x = None
     while touch_x is None:
         events = pg.event.get([FINGERDOWN])
@@ -32,9 +33,9 @@ def gettouch(wait=None):
             event = events[0]
             touch_x = event.x * 1280-640
             touch_y = 360-event.y*720
-        elif not wait:
-            touch_x = -999
-            touch_y = -999
+        elif t.ms()>wait:
+            touch_x = -9999
+            touch_y = -9999
     return touch_x,touch_y
 
 def touch_check(touch_x,touch_y,rand_touch_id,w):
@@ -111,8 +112,8 @@ class TouchTask:
             
             ("Task Params", None, None),
             ("iti", "1500", is_int, "Inter-trial interval"),
-            ("wait_duration","5000",is_int,"Monkey has to react during this period or no reward")
-            ("window_size","-10",is_int,"Tolerance window size for touch precision, positive=easy")
+            ("wait_duration","5000",is_int,"Monkey has to react during this period or no reward"),
+            ("window_size","-10",is_int,"Tolerance window size for touch precision, positive=easy"),
             #"stim_duration", "300", is_int, "Stimulus presentation time"),
             
             ("Reward Params", None, None),
@@ -189,6 +190,7 @@ class TouchTask:
         
         t.reset()
         app.idlefn(self.params['iti']-t.ms())
+        pygame.event.clear()
         app.fb.flip()
             
         #Fetch a random stimulus. 
@@ -201,24 +203,21 @@ class TouchTask:
         #app.udpy.display(app.globals.dlist)
         
         cur_t = t.ms()
-        touch_x = -999
-        while touch_x == -999:
-            if (t.ms - cur_t) < self.params['wait_duration']:
-                touch_x,touch_y = gettouch(wait=1)
-                self.mySprites[sprite_id].off()
-                app.globals.dlist.update()
-                app.fb.flip()
-                result = touch_check(touch_x,touch_y,rand_pos_id,self.params['window_size'])
-            else:
-                result = 0
-            pygame.event.clear()
-            if result == 1:
-                con(app,"Giving reward...")
-                clk_num = self.params['numdrops']
-                while clk_num > 0:
-                    app.reward(multiplier = 1)
-                    app.idlefn(150)
-                    clk_num -= 1
-            else:
-                con(app,"Wrong, not giving reward")
-            return result,t
+        result = None
+
+        touch_x,touch_y = gettouch(self.params['wait_duration'])
+        self.mySprites[sprite_id].off()
+        app.globals.dlist.update()
+        app.fb.flip()
+        result = touch_check(touch_x,touch_y,rand_pos_id,self.params['window_size'])
+
+        if result == 1:
+            con(app,"Giving reward...")
+            clk_num = self.params['numdrops']
+            while clk_num > 0:
+                app.reward(multiplier = 1)
+                app.idlefn(150)
+                clk_num -= 1
+        else:
+            con(app,"Wrong, no reward")
+        return result,t
