@@ -6,9 +6,8 @@ import random
 import datetime
 
 """
-	The purpose of this file is to get a task template inlcuding most functions. 
-    
-    Everytime you need to develop a task from scratch, you may need to refer to this template. 
+	Show one picture in the middel with changable size. 
+    Reward the monkey if he touches it. 
 
 	7/7/2024
 	Chenghang
@@ -39,13 +38,12 @@ def gettouch(wait=999999):
             touch_y = -9999
     return touch_x,touch_y
 
-def touch_check(touch_x,touch_y,rand_touch_id,w):
-    #w for window_size
-    Pos_list = [(-470,-180),(-170,-180),(170,-180),(470,-180)]
-    image_size_half = (150,150)
+def touch_check(touch_x,touch_y,s,w):
+    #s for image size, w for window_size
+    Pos = (0,0)
+    image_size_half = (s/2,s/2)
     
-    cur_pos = Pos_list[rand_touch_id-1]
-    if (touch_x > (cur_pos[0]-image_size_half[0]-w)) and (touch_x <= (cur_pos[0]+image_size_half[0]+w)) and (touch_y > (cur_pos[1]-image_size_half[1]-w)) and (touch_y <= (cur_pos[1]+image_size_half[1]+w)):
+    if (touch_x > (Pos[0]-image_size_half[0]-w)) and (touch_x <= (Pos[0]+image_size_half[0]+w)) and (touch_y > (Pos[1]-image_size_half[1]-w)) and (touch_y <= (Pos[1]+image_size_half[1]+w)):
         return 1
     else: 
         return 0
@@ -78,20 +76,19 @@ class TouchTask:
         stim_ids = np.unique(stim_filenames)
         self.numStim = len(stim_ids)
         con(app,f"Found {self.numStim} stimulus")
+        con(app,f"This is the quicker touch task, only loading the first image...")
         
         #For N stimulus, we will have 5 sprites for each, the first one will be the 
         #top location and the other 4 will be listed from left to right in the bottom. 
         #Currently all positions are hardcoded. 
         Cur_id = 0
-        Top_pos = [(0,180)]
-        Bot_pos = [(-470,-180),(-170,-180),(170,-180),(470,-180)]
-        Pos_list = Top_pos + Bot_pos
-        for i in range(self.numStim):
-            for j in range(len(Pos_list)):
-                img = Sprite(1,1,Pos_list[j][0],Pos_list[j][1],fb=app.fb,depth=1,on=0,centerorigin=1,fname=stim_filenames[i])
-                self.mySprites.append(img)
-                self.stimid.append(Cur_id)
-                Cur_id += 1
+        Pos = (0,0)
+        
+        img = Sprite(1,1,Pos[0],Pos[1],fb=app.fb,depth=1,on=0,centerorigin=1,fname=stim_filenames[0])
+        self.mySprites.append(img)
+        self.stimid.append(Cur_id)
+        Cur_id += 1 #Useless, but keeping it. 
+        
         con(app,f"Final Sprite list len is {len(self.mySprites)}")
             
         
@@ -115,7 +112,7 @@ class TouchTask:
             ("iti", "1500", is_int, "Inter-trial interval"),
             ("wait_duration","5000",is_int,"Monkey has to react during this period or no reward"),
             ("window_size","-10",is_int,"Tolerance window size for touch precision, positive=easy"),
-            ("fix_position","0",is_int,"0 = random position, 1-4 = fix position at one of options"),
+            ("img_size","300",is_int,"Size of the stimulus image in pixel size, default 300"),
             #"stim_duration", "300", is_int, "Stimulus presentation time"),
             
             ("Reward Params", None, None),
@@ -145,7 +142,7 @@ class TouchTask:
         suc_num = 0
         current_time = datetime.datetime.now()
         con(app,"Task start time = " + current_time.strftime("%H:%M:%S"))
-    
+        
         self.createStimuli(app)
         
         app.paused = 0
@@ -206,13 +203,9 @@ class TouchTask:
             app.fb.flip()
                 
             #Fetch a random stimulus. 
-            if self.params['fix_position'] == 0:
-                rand_pos_id = random.randint(1,4)
-            else:
-                rand_pos_id = self.params['fix_position']
-            sprite_id = 5*(random.randint(1,10)-1)+rand_pos_id
-            self.mySprites[sprite_id].on()
-            app.globals.dlist.add(self.mySprites[sprite_id])
+            self.mySprites[0].scale(self.params['img_size'],self.params['img_size'])
+            self.mySprites[0].on()
+            app.globals.dlist.add(self.mySprites[0])
             app.globals.dlist.update()
             app.fb.flip()
             #app.udpy.display(app.globals.dlist)
@@ -221,22 +214,22 @@ class TouchTask:
             result = None
 
             touch_x,touch_y = gettouch(self.params['wait_duration'])
-            self.mySprites[sprite_id].off()
+            self.mySprites[0].off()
             app.globals.dlist.update()
             app.fb.flip()
-            result = touch_check(touch_x,touch_y,rand_pos_id,self.params['window_size'])
+            result = touch_check(touch_x,touch_y,self.params['img_size'],self.params['window_size'])
 
             if result == 1:
                 con(app,"Giving reward...")
                 clk_num = self.params['numdrops']
                 while clk_num > 0:
                     app.reward(multiplier = 1)
-                    app.idlefn(150)
+                    app.idlefn(100)
                     clk_num -= 1
-                suc_time += 1
+                suc_num += 1
             else:
                 con(app,"Wrong, no reward")
-                
+
             total_num  += 1
             con(app,f"Success number / total number: {suc_num}/{total_num}")
             return result,t
