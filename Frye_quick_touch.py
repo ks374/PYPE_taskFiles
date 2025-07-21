@@ -114,6 +114,7 @@ class TouchTask:
             ("iti", "1500", is_int, "Inter-trial interval"),
             ("wait_duration","5000",is_int,"Monkey has to react during this period or no reward"),
             ("window_size","-10",is_int,"Tolerance window size for touch precision, positive=easy"),
+            ("fix_position","0",is_int,"0 = random position, 1-4 = fix position at one of options"),
             #"stim_duration", "300", is_int, "Stimulus presentation time"),
             
             ("Reward Params", None, None),
@@ -173,51 +174,60 @@ class TouchTask:
         P = self.myTaskParams.check(mergewith=app.getcommon())
         params = self.myTaskParams.check()
         
-        con(app,">------------------------------")
-        con(app,"Next trial",'blue')
-        
-        app.udpy.display(None)
-        
-        app.globals.dlist = DisplayList(app.fb) #dlist manage all elements that will be shown on the screen. 
-        
-        app.globals.dlist.bg = self.params['bg_before']
-        app.globals.dlist.update()
-        app.fb.flip()
-        
-        #Then start the trial. 
-        app.globals.dlist.bg = self.params['bg_during']
-        app.globals.dlist.update()
-        
-        t.reset()
-        app.idlefn(self.params['iti']-t.ms())
-        pygame.event.clear()
-        app.fb.flip()
+        try:
+            con(app,">------------------------------")
+            con(app,"Next trial",'blue')
             
-        #Fetch a random stimulus. 
-        rand_pos_id = random.randint(1,4)
-        sprite_id = 5*(random.randint(1,10)-1)+rand_pos_id
-        self.mySprites[sprite_id].on()
-        app.globals.dlist.add(self.mySprites[sprite_id])
-        app.globals.dlist.update()
-        app.fb.flip()
-        #app.udpy.display(app.globals.dlist)
-        
-        cur_t = t.ms()
-        result = None
+            app.udpy.display(None)
+            
+            app.globals.dlist = DisplayList(app.fb) #dlist manage all elements that will be shown on the screen. 
+            
+            app.globals.dlist.bg = self.params['bg_before']
+            app.globals.dlist.update()
+            app.fb.flip()
+            
+            #Then start the trial. 
+            app.globals.dlist.bg = self.params['bg_during']
+            app.globals.dlist.update()
+            
+            t.reset()
+            app.idlefn(self.params['iti']-t.ms())
+            pygame.event.clear()
+            app.fb.flip()
+                
+            #Fetch a random stimulus. 
+            if self.params['fix_position'] == 0:
+                rand_pos_id = random.randint(1,4)
+            else:
+                rand_pos_id = self.params['fix_position']
+            sprite_id = 5*(random.randint(1,10)-1)+rand_pos_id
+            self.mySprites[sprite_id].on()
+            app.globals.dlist.add(self.mySprites[sprite_id])
+            app.globals.dlist.update()
+            app.fb.flip()
+            #app.udpy.display(app.globals.dlist)
+            
+            cur_t = t.ms()
+            result = None
 
-        touch_x,touch_y = gettouch(self.params['wait_duration'])
-        self.mySprites[sprite_id].off()
-        app.globals.dlist.update()
-        app.fb.flip()
-        result = touch_check(touch_x,touch_y,rand_pos_id,self.params['window_size'])
+            touch_x,touch_y = gettouch(self.params['wait_duration'])
+            self.mySprites[sprite_id].off()
+            app.globals.dlist.update()
+            app.fb.flip()
+            result = touch_check(touch_x,touch_y,rand_pos_id,self.params['window_size'])
 
-        if result == 1:
-            con(app,"Giving reward...")
-            clk_num = self.params['numdrops']
-            while clk_num > 0:
-                app.reward(multiplier = 1)
-                app.idlefn(150)
-                clk_num -= 1
-        else:
-            con(app,"Wrong, no reward")
-        return result,t
+            if result == 1:
+                con(app,"Giving reward...")
+                clk_num = self.params['numdrops']
+                while clk_num > 0:
+                    app.reward(multiplier = 1)
+                    app.idlefn(150)
+                    clk_num -= 1
+            else:
+                con(app,"Wrong, no reward")
+            return result,t
+        except UserAbort: 
+            app.globals.dlist.bg = params['bg_before']
+            app.fb.flip()
+            con(app,"Aborted. ",'red')
+            return result,t
