@@ -141,8 +141,8 @@ class TouchTask:
         P = self.myTaskParams.check(mergewith=app.getcommon())
         parames = self.myTaskParams.check()
         
-        total_num = 0
-        suc_num = 0
+        self.total_num = 0
+        self.suc_num = 0
         current_time = datetime.datetime.now()
         con(app,"Task start time = " + current_time.strftime("%H:%M:%S"))
     
@@ -182,7 +182,7 @@ class TouchTask:
         
     def _RunTrial(self,app,t):
         P = self.myTaskParams.check(mergewith=app.getcommon())
-        params = self.myTaskParams.check()
+        self.params = self.myTaskParams.check()
         
         try:
             con(app,">------------------------------")
@@ -225,7 +225,10 @@ class TouchTask:
             app.globals.dlist.update()
             app.fb.flip()
             result = touch_check(touch_x,touch_y,rand_pos_id,self.params['window_size'])
-
+            app.globals.dlist = DisplayList(app.fb)
+            app.globals.dlist.bg = self.params['bg_before']
+            app.globals.dlist.update()
+            app.fb.flip()
             if result == 1:
                 con(app,"Giving reward...")
                 clk_num = self.params['numdrops']
@@ -233,12 +236,12 @@ class TouchTask:
                     app.reward(multiplier = 1)
                     app.idlefn(150)
                     clk_num -= 1
-                suc_time += 1
+                self.suc_num += 1
             else:
                 con(app,"Wrong, no reward")
                 
-            total_num  += 1
-            con(app,f"Success number / total number: {suc_num}/{total_num}")
+            self.total_num  += 1
+            con(app,f"Success number / total number: {self.suc_num}/{self.total_num}")
             return result,t
         except UserAbort: 
             app.globals.dlist.bg = params['bg_before']
