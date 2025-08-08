@@ -178,8 +178,8 @@ class TouchTask:
             self.mySprites[show_id].off()
             app.globals.dlist.delete(self.mySprites[show_id])
             
-            if flag_reward_updated == 0
-                if show_id < 25:
+            if flag_reward_updated == 0:
+                if show_id > 25:
                     self.reward_flag.append(0)
                     flag_reward_updated = 1
         if flag_reward_updated == 0:
