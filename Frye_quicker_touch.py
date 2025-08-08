@@ -172,7 +172,9 @@ class TouchTask:
         P = self.myTaskParams.check(mergewith=app.getcommon())
         params = self.myTaskParams.check()
         
-        while 1:
+        while app.running == 1:
+            while app.paused == 1:
+                app.idlefn(1000)
             result,t = self._RunTrial(app,t)
         
         return 1,t
