@@ -3,9 +3,7 @@ from pype import *
 import pygame as pg
 import numpy as np
 import random
-
-
-import cv2# GAKU CHECKING
+from collections import deque
 from MotionDetector import MotionDetector
 
 def RunSet(app):
@@ -59,6 +57,10 @@ class TouchTask:
         self.SpriteBlock.fill((40,120,40))
         
         self.MT = MotionDetector(0,640,480,30,10)
+        
+        self.reward_flag = deque(maxlen=self.params['Reward_delay_length'])
+        for _ in range(self.params['Reward_delay_length']):
+            self.reward_flag.append(0)
             
         
     def createParamTable(self,app):
@@ -78,6 +80,7 @@ class TouchTask:
             ("Task Params", None, None),
             ("Mapping_scale","2500",is_int,"The scale from motion_index to pixels on the screen. "),
             ("iti", "200", is_int, "Inter-trial interval"),
+            ("Reward_delay_length","2",is_int,"The monkey have to sit still for this many rounds to get reward"),
             #"stim_duration", "300", is_int, "Stimulus presentation time"),
             
             ("Reward Params", None, None),
@@ -86,11 +89,14 @@ class TouchTask:
 
     def cleanup(self):
         #delete parameter table and anything else we created
+        self.MT.release()
         self.myTaskParams.save()
         self.myTaskButton.destroy()
         self.myTaskNotebook.destroy()
         self.myTaskParams.destroy()
         del self.mySprites
+        del self.SpriteLine
+        del Self.SpriteBlock
     
     def toggle_photo_diode(self,app):
         app.globals.dlist.update()
@@ -138,6 +144,7 @@ class TouchTask:
             while app.paused == 1:
                 app.idlefn(1000)
             result,t = self._RunTrial(app,t)
+        self.cleanup()
         return 1,t
         
     def _RunTrial(self,app,t):
@@ -154,22 +161,31 @@ class TouchTask:
         
         t.reset()
         #con(app,f"len of mySpirtes = {len(self.mySprites)}")
+        flag_reward_updated = 0
+        while t.ms()<self.params['iti']:
+            MD,_ = self.MT.get_motion_index()
+            Mapping_scale = self.params['Mapping_scale']
+            show_id = round(MD/Mapping_scale)
+            if show_id >= self.numStim:
+                show_id = self.numStim-1
+            elif show_id <= 1:
+                show_id = 1
         
-        MD,_ = self.MT.get_motion_index()
-        Mapping_scale = self.params['Mapping_scale']
-        show_id = round(MD/Mapping_scale)
-        if show_id >= self.numStim:
-            show_id = self.numStim-1
-        elif show_id <= 1:
-            show_id = 1
-        #con(app,f"show_id = {show_id}. ")
-        
-        self.mySprites[show_id].on()
-        app.globals.dlist.add(self.mySprites[show_id])
-        app.globals.dlist.update()
-        app.fb.flip()
-        
-        if show_id < 25: #threshold is drawn at (Mapping_scale * 25):
+            self.mySprites[show_id].on()
+            app.globals.dlist.add(self.mySprites[show_id])
+            app.globals.dlist.update()
+            app.fb.flip()
+            self.mySprites[show_id].off()
+            app.globals.dlist.delete(self.mySprites[show_id])
+            
+            if flag_reward_updated == 0
+                if show_id < 25:
+                    self.reward_flag.append(0)
+                    flag_reward_updated = 1
+        if flag_reward_updated == 0:
+            self.reward_flag.append(1)
+
+        if sum(self.reward_flag) == self.params['Reward_delay_length']: #threshold is drawn at (Mapping_scale * 25):
             con(app,"Giving reward...")
             clk_num = self.params['numdrops']
             while clk_num > 0:
@@ -180,8 +196,5 @@ class TouchTask:
         else:
             con(app,"Wrong, not giving reward")
             result = 0
-        self.mySprites[show_id].off()
-        app.globals.dlist.delete(self.mySprites[show_id])
-        app.idlefn(self.params['iti'])
 
         return result,t
