@@ -72,8 +72,8 @@ def RunSet(app):
 		
 		# Call Run trial
 		while app.running:
-            while app.paused == 1:
-                app.idlefn(1000)
+			while app.paused == 1:
+				app.idlefn(1000)
 			try:
 				# RunTrial is a function defined below that runs a
 				# single trial.

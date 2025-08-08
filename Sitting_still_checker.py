@@ -34,7 +34,7 @@ class TouchTask:
         #A list of stimuli will be created, so that motion_index will correspond to object 
         #at different heights. 
         
-        self.numStim = 1000
+        self.numStim = 100
         stim_ids = range(self.numStim)
         con(app,f"Created {self.numStim} stimuli. ")
         
@@ -55,7 +55,7 @@ class TouchTask:
         con(app,f"Final Sprite list len is {len(self.mySprites)}")
         self.SpriteLine = Sprite(1000,10,0,-270,fb=app.fb,depth=1,on=1,centerorigin=1)
         self.SpriteLine.fill((255,0,0))
-        self.SpriteBlock = Sprite(1000,132,0,-402,fb=app.fb,depth=1,on=1,centerorigin=1)
+        self.SpriteBlock = Sprite(1000,250,0,-402,fb=app.fb,depth=1,on=1,centerorigin=1)
         self.SpriteBlock.fill((40,120,40))
         
         self.MT = MotionDetector(0,640,480,30,10)
@@ -137,12 +137,12 @@ class TouchTask:
         while app.running == 1:
             while app.paused == 1:
                 app.idlefn(1000)
-             result,t = self._RunTrial(app,t)
+            result,t = self._RunTrial(app,t)
         return 1,t
         
     def _RunTrial(self,app,t):
         P = self.myTaskParams.check(mergewith=app.getcommon())
-        params = self.myTaskParams.check()
+        self.params = self.myTaskParams.check()
         
         con(app,">------------------------------")
         con(app,"Next trial",'blue')
@@ -169,7 +169,7 @@ class TouchTask:
         app.globals.dlist.update()
         app.fb.flip()
         
-        if show_id < 250: #threshold is drawn at (Mapping_scale * 25):
+        if show_id < 25: #threshold is drawn at (Mapping_scale * 25):
             con(app,"Giving reward...")
             clk_num = self.params['numdrops']
             while clk_num > 0:
