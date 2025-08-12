@@ -81,11 +81,12 @@ class TouchTask:
             ("Stim Presentation Params", None, None), 
             ("bg_during", "(10, 10, 10)", is_color, "The background color during stimulus presentation"),
             ("Stim_size","10",is_int,"the size of the jumping fixation point"),
+            ("Reward_delay_length","2",is_int,"The monkey have to sit still for this many rounds to get reward"),
+            ("log_path","/home/lab/temp_Chenghang/",is_any,"path to save the log file"),
             
             ("Task Params", None, None),
             ("Mapping_scale","25000",is_int,"The scale from motion_index to upward acceleration. "),
             ("iti", "200", is_int, "Inter-trial interval"),
-            ("Reward_delay_length","2",is_int,"The monkey have to sit still for this many rounds to get reward"),
             ("Downward_acc","1",is_float,"Downward accelleration of the object"),
             #"stim_duration", "300", is_int, "Stimulus presentation time"),
             
@@ -116,10 +117,10 @@ class TouchTask:
     def RunSet(self,app):
         app.tally(clear=1)
         P = self.myTaskParams.check(mergewith=app.getcommon())
-        parames = self.myTaskParams.check()
+        params = self.myTaskParams.check()
     
         self.createStimuli(app)
-        self.setup_csv_file(app)
+        self.setup_csv_file(app,self.params['log_path'])
         
         app.paused = 0
         app.running = 1
@@ -140,8 +141,9 @@ class TouchTask:
         result,t = self.RunTrial(app,t)
         return 1
     
-    def setup_csv_file(self,app):
+    def setup_csv_file(self,app,log_path):
         filename = f"{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}_sitting_task.csv"
+        filename = log_path + filename
         try:
             self.csv_file = open(filename,'w',newline='')
             self.csv_writer = csv.writer(self.csv_file)
