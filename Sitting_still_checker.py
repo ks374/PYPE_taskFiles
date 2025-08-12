@@ -100,11 +100,11 @@ class TouchTask:
         self.myTaskParams.save()
         self.myTaskButton.destroy()
         self.myTaskNotebook.destroy()
-        self.myTaskParams.destroy()
+        #self.myTaskParams.destroy()
         del self.mySprites
         del self.SpriteLine
         del self.SpriteBlock
-        if self.csv.file:
+        if self.csv_file:
             self.csv_file.close()
 
     
@@ -195,6 +195,8 @@ class TouchTask:
             self.show_id_speed = self.show_id_speed + total_a
             if self.show_id_speed > 10:
                 self.show_id_speed = 10
+            elif self.show_id_speed < -30:
+                self.show_id_speed = -30
             self.show_id = round(self.show_id + self.show_id_speed)
             if self.show_id >= self.numStim:
                 self.show_id = self.numStim-1
