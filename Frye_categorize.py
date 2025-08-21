@@ -1,0 +1,245 @@
+import sys, types,os
+from pype import *
+import pygame as pg
+import numpy as np
+import random
+import datetime
+
+"""
+	Show one picture in the middel with changable size. 
+    Reward the monkey if he touches it. 
+
+	7/7/2024
+	Chenghang
+"""
+def RunSet(app):
+    app.taskObject.RunSet(app)
+
+def cleanup(app):
+    app.taskObject.cleanup(app)
+    
+def main(app):
+    app.taskObject = TouchTask(app)
+    app.globals = Holder() #A dummy object to hold parameters. 
+    app.idlefb()
+    app.startfn = RunSet
+
+def gettouch(wait=999999):
+    t = Timer()
+    touch_x = None
+    while touch_x is None:
+        events = pg.event.get([FINGERDOWN])
+        if len(events) > 0:
+            event = events[0]
+            touch_x = event.x * 1280-640
+            touch_y = 360-event.y*720
+        elif t.ms()>wait:
+            touch_x = -9999
+            touch_y = -9999
+    return touch_x,touch_y
+
+def touch_check(touch_x,touch_y,s,w):
+    #s for image size, w for window_size
+    Pos = (0,0)
+    image_size_half = (s/2,s/2)
+    
+    if (touch_x > (Pos[0]-image_size_half[0]-w)) and (touch_x <= (Pos[0]+image_size_half[0]+w)) and (touch_y > (Pos[1]-image_size_half[1]-w)) and (touch_y <= (Pos[1]+image_size_half[1]+w)):
+        return 1
+    else: 
+        return 0
+        
+
+class TouchTask:
+    def __init__(self,app):
+        self.createParamTable(app)
+        self.app = app
+        self.mySprites = list() 
+        self.stimid = list() 
+        self.numStim = 0
+        
+    def createStimuli(self,app):
+        gParam = app.getcommon() 
+        self.params = self.myTaskParams.check()
+        #Coordinate: 
+        #X and Y full size is 1280*720. XY should be (X,Y), where (640,360) is the right bottom corner. 
+        #Then the starting pixel coordinate for the compared picture is (-150,-330)
+        #4 option pictures are (-624,31),(-308,31),(8,31),(324,31)
+        
+        stim_path = self.params['stim_path']
+        stim_filenames = []
+        stim_ids = []
+        for file in os.listdir(stim_path):
+            if file.endswith('.png'):
+                stim_filenames.append(os.path.join(stim_path,file))
+        if len(stim_filenames)==0:
+            print('warning: no images loaded/n')
+        stim_ids = np.unique(stim_filenames)
+        self.numStim = len(stim_ids)
+        con(app,f"Found {self.numStim} stimulus")
+        con(app,f"This is the quicker touch task, only loading the first image...")
+        
+        #For N stimulus, we will have 5 sprites for each, the first one will be the 
+        #top location and the other 4 will be listed from left to right in the bottom. 
+        #Currently all positions are hardcoded. 
+        Cur_id = 0
+        Pos = (0,0)
+        
+        img = Sprite(1,1,Pos[0],Pos[1],fb=app.fb,depth=1,on=0,centerorigin=1,fname=stim_filenames[0])
+        self.mySprites.append(img)
+        self.stimid.append(Cur_id)
+        Cur_id += 1 #Useless, but keeping it. 
+        
+        con(app,f"Final Sprite list len is {len(self.mySprites)}")
+            
+        
+    def createParamTable(self,app):
+        P = app.getcommon()
+        self.myTaskButton = app.taskbutton(text=__name__, check = 1)
+        self.myTaskNotebook = DockWindow(title=__name__, checkbutton=self.myTaskButton)
+        parfile = "%s.%s" % (app.taskname(), P['subject'])
+        
+        if parfile:
+            parfile = parfile + '.par'
+        
+        self.myTaskParams = ParamTable(self.myTaskNotebook, (        
+            ("Stim Presentation Params", None, None), 
+            ("bg_before", "(10, 10, 10)", is_color, "The background color before stimulus presentation"),            
+            ("bg_during", "(10, 10, 10)", is_color, "The background color during stimulus presentation"),
+            ("stim_path", "/home/shapelab/.pyperc/Tasks/Kiani_Stimuli/300/", is_any, "Directory where stimuli are stored"),           
+
+            
+            ("Task Params", None, None),
+            ("iti", "1500", is_int, "Inter-trial interval"),
+            ("wait_duration","5000",is_int,"Monkey has to react during this period or no reward"),
+            ("window_size","-10",is_int,"Tolerance window size for touch precision, positive=easy"),
+            ("img_size","300",is_int,"Size of the stimulus image in pixel size, default 300"),
+            #"stim_duration", "300", is_int, "Stimulus presentation time"),
+            
+            ("Reward Params", None, None),
+            ("numdrops", "8", is_int, "Number of juice drops")
+            ), file=parfile)
+
+    def cleanup(self):
+        #delete parameter table and anything else we created
+        self.myTaskParams.save()
+        self.myTaskButton.destroy()
+        self.myTaskNotebook.destroy()
+        self.myTaskParams.destroy()
+        del self.mySprites
+    
+    def toggle_photo_diode(self,app):
+        app.globals.dlist.update()
+        app.fb.sync_toggle()
+    def turn_off_photo_diode(self,app):
+        app.fb.sync(0)
+    
+    def RunSet(self,app):
+        app.tally(clear=1)
+        P = self.myTaskParams.check(mergewith=app.getcommon())
+        parames = self.myTaskParams.check()
+        
+        self.total_num = 0
+        self.suc_num = 0
+        current_time = datetime.datetime.now()
+        con(app,"Task start time = " + current_time.strftime("%H:%M:%S"))
+        
+        self.createStimuli(app)
+        
+        app.paused = 0
+        app.running = 1
+        app.led(1)
+        
+        app.globals.repnum = -1
+        app.globals.ncorrect = 0
+        app.globals.ntrials = 0
+        app.globals.seqcorrect = 0
+        #app.globals.uicount = 0
+        #app.globals.stimCorrect = 0
+        #app.globals.stimSeen = 0
+        #pp.globals.yOffset = 600
+        
+        t = Timer()
+        
+            #Save recent success rate. 
+        try:
+            result,t = self.RunTrial(app,t)
+        except UserAbort: 
+            pass
+        
+        return 1
+    
+    def RunTrial(self,app,t):
+        P = self.myTaskParams.check(mergewith=app.getcommon())
+        params = self.myTaskParams.check()
+        
+        while app.running == 1:
+            while app.paused == 1:
+                app.idlefn(1000)
+            result,t = self._RunTrial(app,t)
+        
+        return 1,t
+        
+    def _RunTrial(self,app,t):
+        P = self.myTaskParams.check(mergewith=app.getcommon())
+        self.params = self.myTaskParams.check()
+        
+        try:
+            con(app,">------------------------------")
+            con(app,"Next trial",'blue')
+            
+            app.udpy.display(None)
+            
+            app.globals.dlist = DisplayList(app.fb) #dlist manage all elements that will be shown on the screen. 
+            
+            app.globals.dlist.bg = self.params['bg_before']
+            app.globals.dlist.update()
+            app.fb.flip()
+            
+            #Then start the trial. 
+            app.globals.dlist.bg = self.params['bg_during']
+            app.globals.dlist.update()
+            
+            t.reset()
+            app.idlefn(self.params['iti']-t.ms())
+            pygame.event.clear()
+            app.fb.flip()
+                
+            #Fetch a random stimulus. 
+            self.mySprites[0].scale(self.params['img_size'],self.params['img_size'])
+            self.mySprites[0].on()
+            app.globals.dlist.add(self.mySprites[0])
+            app.globals.dlist.update()
+            app.fb.flip()
+            #app.udpy.display(app.globals.dlist)
+            
+            cur_t = t.ms()
+            result = None
+
+            touch_x,touch_y = gettouch(self.params['wait_duration'])
+            self.mySprites[0].off()
+            app.globals.dlist.update()
+            app.fb.flip()
+            result = touch_check(touch_x,touch_y,self.params['img_size'],self.params['window_size'])
+            app.globals.dlist = DisplayList(app.fb)
+            app.globals.dlist.bg = self.params['bg_before']
+            app.globals.dlist.update()
+            app.fb.flip()
+            if result == 1:
+                con(app,"Giving reward...")
+                clk_num = self.params['numdrops']
+                while clk_num > 0:
+                    app.reward(multiplier = 1)
+                    app.idlefn(100)
+                    clk_num -= 1
+                self.suc_num += 1
+            else:
+                con(app,"Wrong, no reward")
+
+            self.total_num  += 1
+            con(app,f"Success number / total number: {self.suc_num}/{self.total_num}")
+            return result,t
+        except UserAbort: 
+            app.globals.dlist.bg = params['bg_before']
+            app.fb.flip()
+            con(app,"Aborted. ",'red')
+            return result,t
