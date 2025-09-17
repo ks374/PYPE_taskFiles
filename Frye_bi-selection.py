@@ -256,20 +256,22 @@ class TouchTask:
                 ref_id = 0
             if ref_id != 0:
                 #Render reference image first: 
-                ref_id_present = ref_id*3-2
+                ref_id_present = ref_id*3-3
                 self.mySprites[ref_id_present].scale(self.params['img_size'],self.params['img_size'])
                 self.mySprites[ref_id_present].on()
                 app.globals.dlist.update()
                 app.fb.flip()
 
-                app.idlefn(self.params['Ref_duration'])
+                #app.idlefn(self.params['Ref_duration']) #Update on 9/17/2025: the monkey get nothing if touching the screen. 
+                touch_x,touch_y = gettouch(self.params['Ref_duration'])
                 self.mySprites[ref_id_present].off()
                 app.globals.dlist.update()
                 app.fb.flip()
 
-                touch_x,touch_y = gettouch(100)
+                #touch_x,touch_y = gettouch(100)
                 if touch_x != -9999:
                     con(app,"The monkey probably incorrectly touched the reference image",'red')
+                    raise touched_ref("Monkey touched ref image")
 
                 app.idlefn(self.params['Ref_Stim_interval'])
                 
@@ -316,4 +318,7 @@ class TouchTask:
             app.globals.dlist.bg = params['bg_before']
             app.fb.flip()
             con(app,"Aborted. ",'red')
-            return result,t
+            return 0,1
+        except touched_ref as e:
+            print(f"Skip this trial because: {e}")
+            return 0,1
