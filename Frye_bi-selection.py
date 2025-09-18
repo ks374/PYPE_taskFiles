@@ -44,8 +44,7 @@ def touch_check(touch_x,touch_y,s,w,ref_is_left):
     if ref_is_left == 1:
         Pos = (-300,0)
     elif ref_is_left == 0:
-        Pos - (300,0)
-    Pos = (0,0)
+        Pos = (300,0)
     image_size_half = (s/2,s/2)
     
     if (touch_x > (Pos[0]-image_size_half[0]-w)) and (touch_x <= (Pos[0]+image_size_half[0]+w)) and (touch_y > (Pos[1]-image_size_half[1]-w)) and (touch_y <= (Pos[1]+image_size_half[1]+w)):
@@ -53,7 +52,8 @@ def touch_check(touch_x,touch_y,s,w,ref_is_left):
     else: 
         return 0
         
-
+class touched_ref(Exception):
+    pass
 class TouchTask:
     def __init__(self,app):
         self.createParamTable(app)
@@ -70,7 +70,7 @@ class TouchTask:
         #Then the starting pixel coordinate for the compared picture is (-150,-330)
         #4 option pictures are (-624,31),(-308,31),(8,31),(324,31)
         
-        stim_type = self.params['rand stimulus?']
+        stim_type = self.params['rand_stimulus?']
         if stim_type == 0:
             stim_path = self.params['stim_path_blue']
         elif stim_type == 1:
@@ -153,7 +153,7 @@ class TouchTask:
         #delete parameter table and anything else we created
         self.myTaskParams.save()
         self.myTaskButton.destroy()
-        self.myTaskNotebook.destroy()
+        #self.myTaskNotebook.destroy()
         #self.myTaskParams.destroy()
         del self.mySprites
     
@@ -259,6 +259,7 @@ class TouchTask:
                 ref_id_present = ref_id*3-3
                 self.mySprites[ref_id_present].scale(self.params['img_size'],self.params['img_size'])
                 self.mySprites[ref_id_present].on()
+                app.globals.dlist.add(self.mySprites[ref_id_present])
                 app.globals.dlist.update()
                 app.fb.flip()
 
@@ -271,7 +272,7 @@ class TouchTask:
                 #touch_x,touch_y = gettouch(100)
                 if touch_x != -9999:
                     con(app,"The monkey probably incorrectly touched the reference image",'red')
-                    raise touched_ref("Monkey touched ref image")
+                    raise touched_ref
 
                 app.idlefn(self.params['Ref_Stim_interval'])
                 
@@ -280,9 +281,10 @@ class TouchTask:
             if ref_id == 0: #Note: this is a temp solution. Show the ref pic if there is one. 
                 ref_id = random.randint(1,self.numStim)
             stim_is_left = random.randint(1,2)-1
-            ref_id_present = ref_id*3 - stim_is_left
+            ref_id_present = ref_id*3 - stim_is_left -1
             self.mySprites[ref_id_present].scale(self.params['img_size'],self.params['img_size'])
             self.mySprites[ref_id_present].on()
+            app.globals.dlist.add(self.mySprites[ref_id_present])
             app.globals.dlist.update()
 
             pygame.event.clear()
@@ -296,7 +298,7 @@ class TouchTask:
             app.fb.flip()
             result = touch_check(touch_x,touch_y,self.params['img_size'],self.params['window_size'],stim_is_left)
 
-            app.globals.dlist = DisplayList(app.fb) #Reset the displaylist. This is unnecessary but just in case somebody change the code without carefully manage the dlist. 
+            app.globals.dlist = DisplayList(app.fb) #Reset the displaylist. 
             app.globals.dlist.bg = self.params['bg_before']
             app.globals.dlist.update()
             app.fb.flip()
@@ -318,7 +320,7 @@ class TouchTask:
             app.globals.dlist.bg = params['bg_before']
             app.fb.flip()
             con(app,"Aborted. ",'red')
-            return 0,1
-        except touched_ref as e:
-            print(f"Skip this trial because: {e}")
-            return 0,1
+            return 0,t
+        except touched_ref:
+            print("Skip this trial because")
+            return 0,t
