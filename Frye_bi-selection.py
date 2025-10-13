@@ -97,8 +97,8 @@ class TouchTask:
         #Currently all positions are hardcoded. 
         Cur_id = 0
         Pos_0 = (0,0)
-        Pos_1 = (-300,0)
-        Pos_2 = (300,0)
+        Pos_1 = (-200+self.params['Image_right_shift'],0)
+        Pos_2 = (200+self.params['Image_right_shift'],0)
         
         for stim_filename in stim_filenames:
             img = Sprite(1,1,Pos_0[0],Pos_0[1],fb=app.fb,depth=1,on=0,centerorigin=1,fname=stim_filename)
@@ -143,10 +143,14 @@ class TouchTask:
             ("wait_duration","5000",is_int,"Monkey has to react during this period or no reward"),
             ("window_size","-10",is_int,"Tolerance window size for touch precision, positive=easy"),
             ("img_size","300",is_int,"Size of the stimulus image in pixel size, default 300"),
+            ("wrong_stim_delay","200",is_int,"how long will the wrong stimulation show up after the correct one,. "),
             #"stim_duration", "300", is_int, "Stimulus presentation time"),
             
             ("Reward Params", None, None),
-            ("numdrops", "8", is_int, "Number of juice drops")
+            ("numdrops", "8", is_int, "Number of juice drops"), 
+
+            ("Miscellaneous",None,None),
+            ("Image_right_shift","200",is_int,"let all selections right shift for X pixel, so the monkey can easily reach with his right hand")
             ), file=parfile)
 
     def cleanup(self):
@@ -282,17 +286,30 @@ class TouchTask:
                 ref_id = random.randint(1,self.numStim)
             stim_is_left = random.randint(1,2)-1
             ref_id_present = ref_id*3 - stim_is_left -1
+            temp = range(1,self.numStim+1)
+            temp = [x for x in temp if x!= ref_id_present]
+            incorrect_id_present = random.choice(temp)*3 - int(not stim_is_left) -1
+
             self.mySprites[ref_id_present].scale(self.params['img_size'],self.params['img_size'])
             self.mySprites[ref_id_present].on()
             app.globals.dlist.add(self.mySprites[ref_id_present])
             app.globals.dlist.update()
-
             pygame.event.clear()
             app.fb.flip()
-            
-            result = None
 
-            touch_x,touch_y = gettouch(self.params['wait_duration'])
+            if self.params['wrong_stim_delay'] == 0:
+                self.params['wrong_stim_delay'] = 1
+            touch_x,touch_y = gettouch(self.params['wrong_stim_delay'])
+            if touch_x == -9999: #If did not touch, show the incorrect stim and do normal touch and check. 
+                self.mySprites[incorrect_id_present].scale(self.params['img_size'],self.params['img_size'])
+                self.mySprites[incorrect_id_present].on()
+                app.globals.dlist.add(self.mySprites[incorrect_id_present])
+                app.globals.dlist.update()
+                pygame.event.clear()
+                app.fb.flip()
+                touch_x,touch_y = gettouch(self.params['wait_duration'])
+                self.mySprites[incorrect_id_present].off()
+            #Or go check directly. 
             self.mySprites[ref_id_present].off()
             app.globals.dlist.update()
             app.fb.flip()
