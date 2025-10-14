@@ -39,7 +39,7 @@ def gettouch(wait=999999):
             touch_y = -9999
     return touch_x,touch_y
 
-def touch_check(touch_x,touch_y,s,w,ref_is_left):
+def touch_check(touch_x,touch_y,s,w,ref_is_left,shift):
     #s for image size, w for window_size
     if ref_is_left == 1:
         Pos = (-300,0)
@@ -47,7 +47,7 @@ def touch_check(touch_x,touch_y,s,w,ref_is_left):
         Pos = (300,0)
     image_size_half = (s/2,s/2)
     
-    if (touch_x > (Pos[0]-image_size_half[0]-w)) and (touch_x <= (Pos[0]+image_size_half[0]+w)) and (touch_y > (Pos[1]-image_size_half[1]-w)) and (touch_y <= (Pos[1]+image_size_half[1]+w)):
+    if (touch_x > (Pos[0]-image_size_half[0]-w+shift)) and (touch_x <= (Pos[0]+image_size_half[0]+w+shift)) and (touch_y > (Pos[1]-image_size_half[1]-w)) and (touch_y <= (Pos[1]+image_size_half[1]+w)):
         return 1
     else: 
         return 0
@@ -287,8 +287,12 @@ class TouchTask:
             stim_is_left = random.randint(1,2)-1
             ref_id_present = ref_id*3 - stim_is_left -1
             temp = range(1,self.numStim+1)
-            temp = [x for x in temp if x!= ref_id_present]
+            temp = [x for x in temp if x!= ref_id]
             incorrect_id_present = random.choice(temp)*3 - int(not stim_is_left) -1
+            con(app,f"ref_id={ref_id}")
+            con(app,f"ref_id_present={ref_id_present}")
+            con(app,f"incorrect_id={temp}")
+            con(app,f"incorrect_id_present={incorrect_id_present}")
 
             self.mySprites[ref_id_present].scale(self.params['img_size'],self.params['img_size'])
             self.mySprites[ref_id_present].on()
@@ -313,7 +317,7 @@ class TouchTask:
             self.mySprites[ref_id_present].off()
             app.globals.dlist.update()
             app.fb.flip()
-            result = touch_check(touch_x,touch_y,self.params['img_size'],self.params['window_size'],stim_is_left)
+            result = touch_check(touch_x,touch_y,self.params['img_size'],self.params['window_size'],stim_is_left,self.params['Image_right_shift'])
 
             app.globals.dlist = DisplayList(app.fb) #Reset the displaylist. 
             app.globals.dlist.bg = self.params['bg_before']
