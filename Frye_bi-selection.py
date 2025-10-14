@@ -174,6 +174,7 @@ class TouchTask:
         
         self.total_num = 0
         self.suc_num = 0
+        self.ref_touch_num = 0
         current_time = datetime.datetime.now()
         con(app,"Task start time = " + current_time.strftime("%H:%M:%S"))
         
@@ -289,10 +290,11 @@ class TouchTask:
             temp = range(1,self.numStim+1)
             temp = [x for x in temp if x!= ref_id]
             incorrect_id_present = random.choice(temp)*3 - int(not stim_is_left) -1
-            con(app,f"ref_id={ref_id}")
-            con(app,f"ref_id_present={ref_id_present}")
-            con(app,f"incorrect_id={temp}")
-            con(app,f"incorrect_id_present={incorrect_id_present}")
+            
+            #con(app,f"ref_id={ref_id}")
+            #con(app,f"ref_id_present={ref_id_present}")
+            #con(app,f"incorrect_id={temp}")
+            #con(app,f"incorrect_id_present={incorrect_id_present}")
 
             self.mySprites[ref_id_present].scale(self.params['img_size'],self.params['img_size'])
             self.mySprites[ref_id_present].on()
@@ -335,7 +337,14 @@ class TouchTask:
                 con(app,"Wrong, no reward",'red')
 
             self.total_num  += 1
-            con(app,f"Success number / total number: {self.suc_num}/{self.total_num}")
+            
+            suc_rate = self.suc_num / self.total_num
+            out_of_window_num = self.total_num - self.suc_num - self.ref_touch_num
+            out_of_window_rate = out_of_window_num / self.total_num
+            ref_touch_rate = self.ref_touch_num / self.total_num
+            con(app,f"Success number / total number: {self.suc_num}/{self.total_num}, ({suc_rate:.1%})")
+            con(app,f"Out_of_window / total number: {out_of_window_num}/{self.total_num}, ({out_of_window_rate:.1%})")
+            con(app,f"Touch_reference_number / total number: {self.ref_touch_num}/{self.total_num}, ({ref_touch_rate:.1%})")
             return result,t
         except UserAbort: 
             app.globals.dlist.bg = params['bg_before']
@@ -343,5 +352,7 @@ class TouchTask:
             con(app,"Aborted. ",'red')
             return 0,t
         except touched_ref:
+            self.ref_touch_num += 1
+            self.total_num += 1
             print("Skip this trial because")
             return 0,t
