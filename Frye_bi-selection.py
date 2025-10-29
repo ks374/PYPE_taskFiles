@@ -77,6 +77,8 @@ class TouchTask:
             stim_path = self.params['stim_path_both']
         elif stim_type == 2:
             stim_path = self.params['stim_path_rand']
+        elif stim_type == 3:
+            stim_path = self.params['stim_path_bd']
         else:
             con(app,"Error: Unknown stim_type!!!Using blue ball stim only","red")
             stim_path = self.params['stim_path_blue']
@@ -114,6 +116,8 @@ class TouchTask:
             self.stimid.append(Cur_id)
             Cur_id += 1
         con(app,f"Final Sprite list len is {len(self.mySprites)}")
+
+        #Prepare blue squares as image boundaries. 
             
         
     def createParamTable(self,app):
@@ -132,13 +136,15 @@ class TouchTask:
             ("stim_path_blue", "/home/shapelab/.pyperc/Tasks/Kiani_Stimuli/300/", is_any, "Directory where stimuli are stored"),    
             ("stim_path_both", "/home/shapelab/.pyperc/Tasks/Kiani_Stimuli/300/", is_any, "Directory where stimuli are stored"),
             ("stim_path_rand", "/home/shapelab/.pyperc/Tasks/Kiani_Stimuli/300/", is_any, "Directory where stimuli are stored"),    #MARK: need to correct this
-            ("rand_stimulus?", "1", is_int, "0 for single blue ball image, 1 for random stimulus with blue ball, 2 for random stimulus without blue ball"),
+            ("stim_path_bd", "/home/shapelab/.pyperc/Tasks/Kiani_Stimuli/300_bd/", is_any, "Directory where stimuli are stored"),    
+
+            ("rand_stimulus?", "1", is_int, "0 for single blue ball image, 1 for random stimulus with blue ball, 2 for random stimulus without blue ball","3 for both with blue boundaries"),
 
             
             ("Task Params", None, None),
             ("Need_ref?", "0", is_int, "If 1, there will be ref first and then selection. Use 0 for early phase training. "),
             ("Ref_duration", "300", is_int, "During for the reference image to show up, default 300"),
-            ("Ref_Stim_interval", "300", is_int, "Duration between reference image and stimulus showing up, default 300"),
+            ("Ref_Stim_interval", "100", is_int, "Duration between reference image and stimulus showing up, default 100"),
             ("iti", "1500", is_int, "Inter-trial interval"),
             ("wait_duration","5000",is_int,"Monkey has to react during this period or no reward"),
             ("window_size","-10",is_int,"Tolerance window size for touch precision, positive=easy"),
