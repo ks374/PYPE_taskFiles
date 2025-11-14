@@ -133,10 +133,10 @@ class TouchTask:
             ("Stim Presentation Params", None, None), 
             ("bg_before", "(10, 10, 10)", is_color, "The background color before stimulus presentation"),            
             ("bg_during", "(10, 10, 10)", is_color, "The background color during stimulus presentation"),
-            ("stim_path_blue", "/home/shapelab/.pyperc/Tasks/Kiani_Stimuli/300/", is_any, "Directory where stimuli are stored"),    
-            ("stim_path_both", "/home/shapelab/.pyperc/Tasks/Kiani_Stimuli/300/", is_any, "Directory where stimuli are stored"),
-            ("stim_path_rand", "/home/shapelab/.pyperc/Tasks/Kiani_Stimuli/300/", is_any, "Directory where stimuli are stored"),    #MARK: need to correct this
-            ("stim_path_bd", "/home/shapelab/.pyperc/Tasks/Kiani_Stimuli/300_bd/", is_any, "Directory where stimuli are stored"),    
+            ("stim_path_blue", "/home/shapelab/.pyperc/Tasks/Frye/blue_300/", is_any, "Directory where stimuli are stored"),    
+            ("stim_path_both", "/home/shapelab/.pyperc/Tasks/Frye/Both_Stim/", is_any, "Directory where stimuli are stored"),
+            ("stim_path_rand", "/home/shapelab/.pyperc/Tasks/Frye/Both_Stim/", is_any, "Directory where stimuli are stored"),    #MARK: need to correct this
+            ("stim_path_bd", "/home/shapelab/.pyperc/Tasks/Frye/Both_Stim_bd/", is_any, "Directory where stimuli are stored"),    
 
             ("rand_stimulus?", "1", is_int, "0 for single blue ball image, 1 for random stimulus with blue ball, 2 for random stimulus without blue ball","3 for both with blue boundaries"),
 
@@ -263,7 +263,7 @@ class TouchTask:
             elif self.params['Need_ref?']==0:
                 ref_id = 0
             else:
-                con(app,"Rrong Need_ref? parameter, will not use reference image")
+                con(app,"Wrong Need_ref? parameter, will not use reference image")
                 ref_id = 0
             if ref_id != 0:
                 #Render reference image first: 
